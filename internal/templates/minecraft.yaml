@@ -1,0 +1,25 @@
+id: minecraft
+name: Minecraft Server
+description: Vanilla Minecraft Java server
+
+image: itzg/minecraft-server:latest
+
+ports:
+  - name: minecraft
+    container: 25565
+    protocol: tcp
+
+volumes:
+  - name: data
+    container_path: /data
+
+env:
+  EULA: "TRUE"
+  TYPE: VANILLA
+  VERSION: "LATEST"
+
+resources:
+  memory: 2G
+  cpu: 1
+
+restart: always

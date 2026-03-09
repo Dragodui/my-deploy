@@ -11,7 +11,7 @@ import (
 
 func main() {
 	cfg := config.NewConfig()
-	server := server.NewServer()
+	server := server.NewServer(cfg)
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), server); err != nil {
 		log.Fatalf("Error while launching the server: %v", err)
 	}
