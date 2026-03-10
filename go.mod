@@ -5,8 +5,10 @@ go 1.24.3
 require github.com/moby/moby/client v0.3.0
 
 require (
+	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/lib/pq v1.11.2 // indirect
+	golang.org/x/crypto v0.48.0 // indirect
 )
 
 require (
@@ -30,5 +32,5 @@ require (
 	go.opentelemetry.io/otel v1.35.0 // indirect
 	go.opentelemetry.io/otel/metric v1.35.0 // indirect
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
-	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
 )

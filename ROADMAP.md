@@ -67,14 +67,14 @@ CREATE TABLE deployments (
 
 ### Models
 
-- [ ] Create `internal/models/user.go` — User struct
-- [ ] Create `internal/models/agent_record.go` — AgentRecord struct (persistent agent model)
-- [ ] Update `internal/models/deploy.go` — add `AgentID` to Deployment
-- [ ] Remove duplicate `Command` from `internal/models/agent.go` (already defined in `internal/agent/messages.go`)
+- [x] Create `internal/models/user.go` — User struct
+- [x] Create `internal/models/agent_record.go` — AgentRecord struct (persistent agent model)
+- [x] Update `internal/models/deploy.go` — add `AgentID` to Deployment
+- [x] Remove duplicate `Command` from `internal/models/agent.go` (already defined in `internal/agent/messages.go`)
 
 ### DB
 
-- [ ] Add `RunMigrations()` to `internal/db/db.go`
+- [x] Add `RunMigrations()` to `internal/db/db.go`
 
 ---
 
@@ -89,12 +89,12 @@ go get github.com/golang-jwt/jwt/v5
 
 ### Tasks
 
-- [ ] `internal/config/config.go` — add `JWTSecret` from `JWT_SECRET` env var
-- [ ] `internal/auth/auth.go` — GenerateToken, ValidateToken, HashPassword, CheckPassword
-- [ ] `internal/repository/user.go` — Create, GetByEmail, GetByID
-- [ ] `internal/service/auth.go` — Signup(email, password) → JWT, Login(email, password) → JWT
-- [ ] `internal/http/auth.go` — `POST /api/auth/signup`, `POST /api/auth/login`
-- [ ] `internal/http/middleware.go` — JWT middleware, extracts userID into context
+- [x] `internal/config/config.go` — add `JWTSecret` from `JWT_SECRET` env var
+- [x] `internal/auth/auth.go` — GenerateToken, ValidateToken, HashPassword, CheckPassword
+- [x] `internal/repository/user.go` — Create, GetByEmail, GetByID
+- [x] `internal/service/auth.go` — Signup(email, password) → JWT, Login(email, password) → JWT
+- [x] `internal/http/handler/auth.go` — `POST /api/auth/sign-up`, `POST /api/auth/sign-in`
+- [x] `internal/http/middleware/jwt.go` — JWT middleware, extracts userID into context
 
 ---
 

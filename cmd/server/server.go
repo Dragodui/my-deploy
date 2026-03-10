@@ -9,6 +9,7 @@ import (
 	"github.com/dragodui/my-deploy/internal/config"
 	"github.com/dragodui/my-deploy/internal/db"
 	myhttp "github.com/dragodui/my-deploy/internal/http"
+	"github.com/dragodui/my-deploy/internal/http/handler"
 	"github.com/dragodui/my-deploy/internal/registry"
 	"github.com/dragodui/my-deploy/internal/repository"
 	"github.com/dragodui/my-deploy/internal/service"
@@ -29,9 +30,14 @@ func NewServer(cfg *config.Config) *http.ServeMux {
 	if err != nil {
 		log.Fatal(err)
 	}
+	agentRegistry := registry.New()
+
+	// auth
+	userRepo := repository.NewUserRepository(database)
+	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
+	authHandler := handler.NewAuthHandler(authService)
 
 	deployRepo := repository.NewDeployRepository(database)
-	agentRegistry := registry.New()
 	deployService := service.NewDeployService(deployRepo, agentRegistry, tplRegistry)
 	wsHandler := myhttp.NewWSHandler(agentRegistry)
 
@@ -42,6 +48,10 @@ func NewServer(cfg *config.Config) *http.ServeMux {
 		w.Write([]byte("OK"))
 	})
 	mux.HandleFunc("GET /ws/agent", wsHandler.HandleAgentWS)
+
+	// auth
+	mux.HandleFunc("POST /api/auth/sign-up", authHandler.SignUp)
+	mux.HandleFunc("POST /api/auth/sign-in", authHandler.SignIn)
 
 	return mux
 }

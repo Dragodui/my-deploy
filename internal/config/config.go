@@ -7,8 +7,9 @@ import (
 )
 
 type Config struct {
-	Port  int
-	DBDSN string
+	Port      int
+	DBDSN     string
+	JWTSecret string
 }
 
 func NewConfig() *Config {
@@ -26,8 +27,14 @@ func NewConfig() *Config {
 		log.Fatal("DB_DSN is required")
 	}
 
+	JWTSecret := os.Getenv("JWT_SECRET")
+	if JWTSecret == "" {
+		log.Fatal("JWT_SECRET is required")
+	}
+
 	return &Config{
-		Port:  port,
-		DBDSN: dbDSN,
+		Port:      port,
+		DBDSN:     dbDSN,
+		JWTSecret: JWTSecret,
 	}
 }
