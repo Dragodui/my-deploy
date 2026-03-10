@@ -10,6 +10,7 @@ import (
 	"github.com/dragodui/my-deploy/internal/db"
 	myhttp "github.com/dragodui/my-deploy/internal/http"
 	"github.com/dragodui/my-deploy/internal/http/handler"
+	"github.com/dragodui/my-deploy/internal/http/middleware"
 	"github.com/dragodui/my-deploy/internal/registry"
 	"github.com/dragodui/my-deploy/internal/repository"
 	"github.com/dragodui/my-deploy/internal/service"
@@ -47,7 +48,8 @@ func NewServer(cfg *config.Config) *http.ServeMux {
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK"))
 	})
-	mux.HandleFunc("GET /ws/agent", wsHandler.HandleAgentWS)
+	jwtAuth := middleware.JWTAuth(cfg.JWTSecret)
+	mux.Handle("GET /ws/agent", jwtAuth(http.HandlerFunc(wsHandler.HandleAgentWS)))
 
 	// auth
 	mux.HandleFunc("POST /api/auth/sign-up", authHandler.SignUp)

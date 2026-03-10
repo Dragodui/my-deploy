@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/dragodui/my-deploy/internal/agent"
+	"github.com/dragodui/my-deploy/internal/http/middleware"
 	"github.com/dragodui/my-deploy/internal/registry"
 	"github.com/gorilla/websocket"
 )
@@ -24,11 +24,9 @@ func NewWSHandler(reg *registry.AgentRegistry) *WSHandler {
 }
 
 func (h *WSHandler) HandleAgentWS(w http.ResponseWriter, r *http.Request) {
-	// extract token from Authorization header
-	auth := r.Header.Get("Authorization")
-	token := strings.TrimPrefix(auth, "Bearer ")
-	if token == "" {
-		http.Error(w, "missing auth token", http.StatusUnauthorized)
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -38,13 +36,13 @@ func (h *WSHandler) HandleAgentWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ac := h.registry.Register(token, conn)
-	log.Printf("agent connected: %s", token)
+	ac := h.registry.Register(userID, conn)
+	log.Printf("agent connected: userID=%s", userID)
 
 	defer func() {
-		h.registry.Unregister(token)
+		h.registry.Unregister(userID)
 		conn.Close()
-		log.Printf("agent disconnected: %s", token)
+		log.Printf("agent disconnected: userID=%s", userID)
 	}()
 
 	// read loop: receive results from agent
