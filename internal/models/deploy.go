@@ -76,6 +76,7 @@ type Deployment struct {
 	Ports   []PortBinding   `json:"ports" db:"ports"`
 	Volumes []VolumeBinding `json:"volumes" db:"volumes"`
 	Env     []string        `json:"env" db:"env"`
+	AgentID string          `json:"agent_id" db:"agent_id"`
 
 	Status string `json:"status" db:"status"`
 }

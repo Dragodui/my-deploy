@@ -16,12 +16,13 @@ import (
 )
 
 func NewServer(cfg *config.Config) *http.ServeMux {
-	database := db.New(cfg.DBDSN)
-
 	dir, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	database := db.New(cfg.DBDSN)
+	db.RunMigration(filepath.Join(dir, "migrations"), database)
 
 	templatesDir := filepath.Join(dir, "internal", "templates")
 	tplRegistry, err := templates.NewTemplatesRegistry(templatesDir)
