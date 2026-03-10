@@ -12,8 +12,7 @@ type Docker struct {
 }
 
 func NewDockerClient(cfg *config.Config) *Docker {
-	dockerClient, err := client.New(client.WithHost(cfg.DockerHost),
-		client.WithAPIVersion(cfg.DockerAPIVersion))
+	dockerClient, err := client.New(client.WithHost(cfg.DockerHost))
 
 	if err != nil {
 		log.Fatalf("Error while initialize docker client: %v", err)

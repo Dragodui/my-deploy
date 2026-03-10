@@ -74,7 +74,7 @@ type Deployment struct {
 
 	Ports   []PortBinding     `json:"ports" db:"ports"`
 	Volumes []VolumeBinding   `json:"volumes" db:"volumes"`
-	Env     map[string]string `json:"env" db:"env"`
+	Env     []string `json:"env" db:"env"`
 
 	Status string `json:"status" db:"status"`
 }
