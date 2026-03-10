@@ -20,6 +20,9 @@ func NewTemplatesRegistry(dir string) (*TemplatesRegistry, error) {
 
 	templates := map[string]*models.AppTemplate{}
 	for _, file := range files {
+		if filepath.Ext(file.Name()) != ".yaml" && filepath.Ext(file.Name()) != ".yml" {
+			continue
+		}
 		data, err := os.ReadFile(filepath.Join(dir, file.Name()))
 		if err != nil {
 			return nil, err

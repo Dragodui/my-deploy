@@ -35,6 +35,7 @@ type AppTemplate struct {
 
 	Restart string `json:"restart,omitempty" yaml:"restart,omitempty" db:"restart"`
 }
+
 // - volumes data
 type VolumeBinding struct {
 	HostPath      string `json:"host_path"`
@@ -72,9 +73,9 @@ type Deployment struct {
 
 	ContainerID string `json:"container_id" db:"container_id"`
 
-	Ports   []PortBinding     `json:"ports" db:"ports"`
-	Volumes []VolumeBinding   `json:"volumes" db:"volumes"`
-	Env     []string `json:"env" db:"env"`
+	Ports   []PortBinding   `json:"ports" db:"ports"`
+	Volumes []VolumeBinding `json:"volumes" db:"volumes"`
+	Env     []string        `json:"env" db:"env"`
 
 	Status string `json:"status" db:"status"`
 }
