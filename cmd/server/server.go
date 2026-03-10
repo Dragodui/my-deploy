@@ -1,39 +1,46 @@
 package server
 
 import (
-	"database/sql"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 
 	"github.com/dragodui/my-deploy/internal/config"
-	"github.com/dragodui/my-deploy/internal/docker"
+	"github.com/dragodui/my-deploy/internal/db"
+	myhttp "github.com/dragodui/my-deploy/internal/http"
+	"github.com/dragodui/my-deploy/internal/registry"
 	"github.com/dragodui/my-deploy/internal/repository"
 	"github.com/dragodui/my-deploy/internal/service"
 	"github.com/dragodui/my-deploy/internal/templates"
 )
 
 func NewServer(cfg *config.Config) *http.ServeMux {
-	docker := docker.NewDockerClient(cfg)
+	database := db.New(cfg.DBDSN)
+
 	dir, err := os.Getwd()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	templatesDir := filepath.Join(dir, "internal", "templates")
-	templates, err := templates.NewTemplatesRegistry(templatesDir)
+	tplRegistry, err := templates.NewTemplatesRegistry(templatesDir)
 	if err != nil {
 		log.Fatal(err)
 	}
-	// !!! CHANGE TO REAL DB
-	deployRepo := repository.NewDeployRepository(&sql.DB{})
-	deployService := service.NewDeployService(deployRepo, docker, templates)
 
-	server := http.NewServeMux()
-	server.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+	deployRepo := repository.NewDeployRepository(database)
+	agentRegistry := registry.New()
+	deployService := service.NewDeployService(deployRepo, agentRegistry, tplRegistry)
+	wsHandler := myhttp.NewWSHandler(agentRegistry)
+
+	_ = deployService // TODO: use in HTTP handlers
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK"))
 	})
+	mux.HandleFunc("GET /ws/agent", wsHandler.HandleAgentWS)
 
-	return server
+	return mux
 }

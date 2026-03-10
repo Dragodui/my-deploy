@@ -2,29 +2,24 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"net/netip"
-	"strconv"
 
-	"github.com/dragodui/my-deploy/internal/docker"
+	"github.com/dragodui/my-deploy/internal/agent"
 	"github.com/dragodui/my-deploy/internal/models"
+	"github.com/dragodui/my-deploy/internal/registry"
 	"github.com/dragodui/my-deploy/internal/repository"
 	"github.com/dragodui/my-deploy/internal/templates"
-	"github.com/moby/moby/api/types/container"
-	"github.com/moby/moby/api/types/network"
-	"github.com/moby/moby/client"
+	"github.com/google/uuid"
+	"maps"
 )
 
 func mapToEnv(defaults, overrides map[string]string) []string {
 	env := map[string]string{}
 
-	for k, v := range defaults {
-		env[k] = v
-	}
+	maps.Copy(env, defaults)
 
-	for k, v := range overrides {
-		env[k] = v
-	}
+	maps.Copy(env, overrides)
 
 	var result []string
 	for k, v := range env {
@@ -36,125 +31,122 @@ func mapToEnv(defaults, overrides map[string]string) []string {
 
 type DeployService struct {
 	repo      *repository.DeployRepository
-	docker    *docker.Docker
+	registry  *registry.AgentRegistry
 	templates *templates.TemplatesRegistry
 }
 
-func NewDeployService(repo *repository.DeployRepository, docker *docker.Docker, templates *templates.TemplatesRegistry) *DeployService {
-	return &DeployService{repo, docker, templates}
+func NewDeployService(repo *repository.DeployRepository, reg *registry.AgentRegistry, templates *templates.TemplatesRegistry) *DeployService {
+	return &DeployService{repo, reg, templates}
 }
 
-// create docker container here
-func (svc *DeployService) Create(ctx context.Context, req models.DeployRequest) error {
-	var tpl *models.AppTemplate
+// Create sends a deploy command to the connected agent.
+func (svc *DeployService) Create(ctx context.Context, agentToken string, req models.DeployRequest) error {
+	ac, ok := svc.registry.Get(agentToken)
+	if !ok {
+		return fmt.Errorf("agent not connected")
+	}
 
-	// check if app exists
+	var tpl *models.AppTemplate
 	if req.AppID != nil {
-		var ok bool
-		tpl, ok = svc.templates.Get(*req.AppID)
-		if !ok {
+		var found bool
+		tpl, found = svc.templates.Get(*req.AppID)
+		if !found {
 			return fmt.Errorf("not found template with id: %s", *req.AppID)
 		}
 	}
 
-	// !!! continue templates logic
-	config := &container.Config{}
+	// build payload for agent
+	payload := agent.CreatePayload{
+		Name: req.Name,
+	}
 
-	// image setup
+	// image
 	if tpl != nil {
-		config.Image = tpl.Image
-		config.Env = mapToEnv(tpl.Env, req.Env)
+		payload.Image = tpl.Image
+		payload.Env = mergeEnv(tpl.Env, req.Env)
 	} else if req.Image != nil {
-		config.Image = *req.Image
-		config.Env = mapToEnv(nil, req.Env)
+		payload.Image = *req.Image
+		payload.Env = req.Env
 	} else {
 		return fmt.Errorf("image not specified")
 	}
 
-	// ports setup
-	exposedPorts := network.PortSet{}
-	portBindings := network.PortMap{}
-	var ports []models.PortBinding
-
+	// ports
 	if tpl != nil && len(tpl.Ports) > 0 {
 		for _, p := range tpl.Ports {
-			containerPort, _ := network.ParsePort(fmt.Sprintf("%d/tcp", p.Container))
-			exposedPorts[containerPort] = struct{}{}
-
-			hostPort := 0
-			if len(req.Ports) > 0 {
-				for _, pb := range req.Ports {
-					if pb.ContainerPort == p.Container {
-						hostPort = pb.HostPort
-					}
+			hostPort := p.Container
+			for _, pb := range req.Ports {
+				if pb.ContainerPort == p.Container {
+					hostPort = pb.HostPort
 				}
 			}
-			if hostPort == 0 {
-				hostPort = p.Container
-			}
-			portBindings[containerPort] = []network.PortBinding{
-				{HostIP: netip.MustParseAddr("0.0.0.0"), HostPort: strconv.Itoa(hostPort)},
-			}
-			ports = append(ports, models.PortBinding{HostPort: hostPort, ContainerPort: p.Container})
+			payload.Ports = append(payload.Ports, agent.PortBinding{
+				HostPort:      hostPort,
+				ContainerPort: p.Container,
+			})
 		}
 	} else {
-		ports = req.Ports
-		for _, pb := range ports {
-			containerPort, _ := network.ParsePort(fmt.Sprintf("%d/tcp", pb.ContainerPort))
-			exposedPorts[containerPort] = struct{}{}
-
-			portBindings[containerPort] = []network.PortBinding{
-				{HostIP: netip.MustParseAddr("0.0.0.0"), HostPort: strconv.Itoa(pb.HostPort)},
-			}
+		for _, pb := range req.Ports {
+			payload.Ports = append(payload.Ports, agent.PortBinding{
+				HostPort:      pb.HostPort,
+				ContainerPort: pb.ContainerPort,
+			})
 		}
-	}
-	config.ExposedPorts = exposedPorts
-
-	// host config
-	hostConfig := &container.HostConfig{
-		PortBindings: portBindings,
-		RestartPolicy: container.RestartPolicy{
-			Name: "always",
-		},
 	}
 
 	// volumes
 	if tpl != nil && len(tpl.Volumes) > 0 {
-		hostConfig.Binds = []string{}
 		for _, vol := range tpl.Volumes {
-			hostPath := fmt.Sprintf("/var/lib/mydeploy/%s/%s", req.Name, vol.Name)
-			hostConfig.Binds = append(hostConfig.Binds, fmt.Sprintf("%s:%s", hostPath, vol.ContainerPath))
+			payload.Volumes = append(payload.Volumes, agent.VolumeBinding{
+				HostPath:      fmt.Sprintf("/var/lib/mydeploy/%s/%s", req.Name, vol.Name),
+				ContainerPath: vol.ContainerPath,
+			})
 		}
 	}
 
-	// container logic here
-	res, err := svc.docker.Client.ContainerCreate(ctx, client.ContainerCreateOptions{
-		Config:     config,
-		HostConfig: hostConfig,
-		Name:       req.Name,
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	result, err := ac.SendCommand(ctx, agent.Command{
+		Type:    "create",
+		ID:      uuid.New().String(),
+		Payload: payloadJSON,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to create container: %w", err)
+		return fmt.Errorf("agent communication error: %w", err)
+	}
+	if !result.Success {
+		return fmt.Errorf("agent error: %s", result.Error)
 	}
 
-	if _, err := svc.docker.Client.ContainerStart(ctx, res.ID, client.ContainerStartOptions{}); err != nil {
-		return err
+	// save to db
+	var ports []models.PortBinding
+	for _, p := range payload.Ports {
+		ports = append(ports, models.PortBinding{HostPort: p.HostPort, ContainerPort: p.ContainerPort})
 	}
 
-	deploy := models.Deployment{
-		ID:          res.ID,
+	deploy := &models.Deployment{
 		Name:        req.Name,
 		AppID:       req.AppID,
-		Image:       config.Image,
-		ContainerID: res.ID,
+		Image:       payload.Image,
+		ContainerID: result.ContainerID,
 		Ports:       ports,
-		Env:         config.Env,
+		Env:         mapToEnv(payload.Env, nil),
+		Status:      "running",
 	}
 
-	// create in db
-	if err := svc.repo.Create(&deploy); err != nil {
-		return err
-	}
+	return svc.repo.Create(deploy)
+}
 
-	return nil
+func mergeEnv(defaults, overrides map[string]string) map[string]string {
+	merged := make(map[string]string, len(defaults)+len(overrides))
+	for k, v := range defaults {
+		merged[k] = v
+	}
+	for k, v := range overrides {
+		merged[k] = v
+	}
+	return merged
 }

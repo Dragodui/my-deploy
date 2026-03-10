@@ -7,9 +7,8 @@ import (
 )
 
 type Config struct {
-	Port             int
-	DockerHost       string
-	DockerAPIVersion string
+	Port  int
+	DBDSN string
 }
 
 func NewConfig() *Config {
@@ -22,15 +21,13 @@ func NewConfig() *Config {
 		}
 	}
 
-	dockerHost := os.Getenv("DOCKER_HOST")
-	dockerAPIVersion := os.Getenv("DOCKER_API_VERSION")
-	if dockerHost == "" || dockerAPIVersion == "" {
-		log.Fatal("DOCKER_HOST or DOCKER_API_VERSION are not in env")
+	dbDSN := os.Getenv("DB_DSN")
+	if dbDSN == "" {
+		log.Fatal("DB_DSN is required")
 	}
 
 	return &Config{
-		Port:             port,
-		DockerHost:       dockerHost,
-		DockerAPIVersion: dockerAPIVersion,
+		Port:  port,
+		DBDSN: dbDSN,
 	}
 }
