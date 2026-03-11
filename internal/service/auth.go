@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 
 	"github.com/dragodui/my-deploy/internal/auth"
@@ -25,7 +26,7 @@ func NewAuthService(userRepo UserRepo, jwtSecret string) *AuthService {
 
 func (svc *AuthService) SignUp(ctx context.Context, email, name, password string) (string, error) {
 	exists, err := svc.userRepo.GetByEmail(ctx, email)
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return "", err
 	}
 

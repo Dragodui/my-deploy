@@ -49,7 +49,7 @@ func (a *Agent) Run(ctx context.Context) {
 
 func (a *Agent) connect(ctx context.Context) error {
 	header := make(map[string][]string)
-	header["Authorization"] = []string{"Bearer " + a.token}
+	header["X-Agent-Token"] = []string{a.token}
 
 	conn, _, err := websocket.DefaultDialer.DialContext(ctx, a.serverURL, header)
 	if err != nil {

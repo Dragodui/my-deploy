@@ -120,12 +120,13 @@ go get github.com/golang-jwt/jwt/v5
 
 ## Phase 5: Agent CLI
 
-- [ ] `internal/agent/machine.go` — compute machineID (hostname + persisted random seed)
-- [ ] `internal/agent/localconfig.go` — `~/.mydeploy/config.json`: server_url, jwt, agent_token, machine_id
-- [ ] `internal/agent/setup.go` — interactive setup: prompt email/password → login API → register agent API → save config
-- [ ] `cmd/agent/main.go` — subcommands:
-  - `setup --server URL` — interactive registration
-  - `run` — load from config (or `--token` for backward compatibility)
+- [x] `internal/agent/machine.go` — GenerateMachineID via uuid
+- [x] `internal/agent/localconfig.go` — `~/.mydeploy/config.json`: Load/Save
+- [x] `internal/agent/api.go` — APIClient: SignIn, SignUp, RegisterAgent
+- [x] `internal/agent/setup.go` — interactive setup: prompt email/password → auth API → register agent → save config
+- [x] `internal/agent/client.go` — X-Agent-Token header instead of Bearer JWT
+- [x] `cmd/agent/main.go` — Load config → setup if missing → run agent
+- [ ] `cmd/agent/main.go` — CLI subcommands: setup, agent, deploy, list, stop
 
 ---
 
