@@ -5,15 +5,21 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"maps"
+
 	"github.com/dragodui/my-deploy/internal/agent"
 	"github.com/dragodui/my-deploy/internal/models"
 	"github.com/dragodui/my-deploy/internal/registry"
 	"github.com/google/uuid"
-	"maps"
 )
 
 type DeployRepo interface {
-	Create(deploy *models.Deployment) error
+	Create(ctx context.Context, d *models.Deployment) (*models.Deployment, error)
+	GetByID(ctx context.Context, id string) (*models.Deployment, error)
+	ListByAgent(ctx context.Context, agentID string) ([]models.Deployment, error)
+	UpdateStatus(ctx context.Context, id, status string) error
+	UpdateContainerID(ctx context.Context, id, containerID string) error
+	Delete(ctx context.Context, id string) error
 }
 
 type AgentRegistryProvider interface {
@@ -50,10 +56,10 @@ func NewDeployService(repo DeployRepo, reg AgentRegistryProvider, templates Temp
 }
 
 // Create sends a deploy command to the connected agent.
-func (svc *DeployService) Create(ctx context.Context, agentToken string, req models.DeployRequest) error {
+func (svc *DeployService) Create(ctx context.Context, agentToken string, req models.DeployRequest) (*models.Deployment, error) {
 	ac, ok := svc.registry.Get(agentToken)
 	if !ok {
-		return fmt.Errorf("agent not connected")
+		return nil, fmt.Errorf("agent not connected")
 	}
 
 	var tpl *models.AppTemplate
@@ -61,7 +67,7 @@ func (svc *DeployService) Create(ctx context.Context, agentToken string, req mod
 		var found bool
 		tpl, found = svc.templates.Get(*req.AppID)
 		if !found {
-			return fmt.Errorf("not found template with id: %s", *req.AppID)
+			return nil, fmt.Errorf("not found template with id: %s", *req.AppID)
 		}
 	}
 
@@ -78,7 +84,7 @@ func (svc *DeployService) Create(ctx context.Context, agentToken string, req mod
 		payload.Image = *req.Image
 		payload.Env = req.Env
 	} else {
-		return fmt.Errorf("image not specified")
+		return nil, fmt.Errorf("image not specified")
 	}
 
 	// ports
@@ -116,7 +122,7 @@ func (svc *DeployService) Create(ctx context.Context, agentToken string, req mod
 
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	result, err := ac.SendCommand(ctx, agent.Command{
@@ -125,10 +131,10 @@ func (svc *DeployService) Create(ctx context.Context, agentToken string, req mod
 		Payload: payloadJSON,
 	})
 	if err != nil {
-		return fmt.Errorf("agent communication error: %w", err)
+		return nil, fmt.Errorf("agent communication error: %w", err)
 	}
 	if !result.Success {
-		return fmt.Errorf("agent error: %s", result.Error)
+		return nil, fmt.Errorf("agent error: %s", result.Error)
 	}
 
 	// save to db
@@ -141,13 +147,13 @@ func (svc *DeployService) Create(ctx context.Context, agentToken string, req mod
 		Name:        req.Name,
 		AppID:       req.AppID,
 		Image:       payload.Image,
-		ContainerID: result.ContainerID,
+		ContainerID: &result.ContainerID,
 		Ports:       ports,
 		Env:         mapToEnv(payload.Env, nil),
 		Status:      "running",
 	}
 
-	return svc.repo.Create(deploy)
+	return svc.repo.Create(ctx, deploy)
 }
 
 func mergeEnv(defaults, overrides map[string]string) map[string]string {

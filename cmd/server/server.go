@@ -46,9 +46,8 @@ func NewServer(cfg *config.Config) *http.ServeMux {
 	// deploy
 	deployRepo := repository.NewDeployRepository(database)
 	deployService := service.NewDeployService(deployRepo, agentRegistry, tplRegistry)
+	deployHandler := handler.NewDeployHandler(deployService, deployRepo)
 	wsHandler := myhttp.NewWSHandler(agentRegistry)
-
-	_ = deployService // TODO: use in HTTP handlers
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
@@ -63,6 +62,12 @@ func NewServer(cfg *config.Config) *http.ServeMux {
 
 	// agent
 	mux.Handle("POST /api/agent", jwtAuth(http.HandlerFunc(agentHandler.RegisterOrGet)))
+
+	// deploy
+	mux.Handle("POST /api/deployments", jwtAuth(http.HandlerFunc(deployHandler.Create)))
+	mux.Handle("GET /api/deployments", jwtAuth(http.HandlerFunc(deployHandler.ListByAgent)))
+	mux.Handle("GET /api/deployments/{id}", jwtAuth(http.HandlerFunc(deployHandler.GetByID)))
+	mux.Handle("DELETE /api/deployments/{id}", jwtAuth(http.HandlerFunc(deployHandler.Delete)))
 
 	return mux
 }

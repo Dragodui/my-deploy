@@ -129,8 +129,9 @@ go get github.com/golang-jwt/jwt/v5
 
 ## Phase 6: Wiring
 
-- [ ] `cmd/server/server.go` — init new repos/services/handlers, register routes
-- [ ] `internal/repository/deploy.go` — real SQL queries instead of mock
+- [x] `cmd/server/server.go` — init new repos/services/handlers, register routes
+- [x] `internal/repository/deploy.go` — real SQL queries instead of mock
+- [x] `internal/http/handler/deploy.go` — CRUD endpoints for deployments
 
 ---
 

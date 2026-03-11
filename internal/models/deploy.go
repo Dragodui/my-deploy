@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 // - resource
 type ResourceTemplate struct {
 	Memory string `json:"memory,omitempty" yaml:"memory,omitempty"`
@@ -71,12 +73,13 @@ type Deployment struct {
 	AppID *string `json:"app_id,omitempty" db:"app_id"`
 	Image string  `json:"image" db:"image"`
 
-	ContainerID string `json:"container_id" db:"container_id"`
+	ContainerID *string `json:"container_id,omitempty" db:"container_id"`
 
 	Ports   []PortBinding   `json:"ports" db:"ports"`
 	Volumes []VolumeBinding `json:"volumes" db:"volumes"`
 	Env     []string        `json:"env" db:"env"`
 	AgentID string          `json:"agent_id" db:"agent_id"`
 
-	Status string `json:"status" db:"status"`
+	Status    string    `json:"status" db:"status"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
