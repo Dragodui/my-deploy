@@ -100,9 +100,9 @@ go get github.com/golang-jwt/jwt/v5
 
 ## Phase 3: Agent Registration API
 
-- [ ] `internal/repository/agent.go` — Create, GetByToken, GetByUserAndMachine, ListByUser, UpdateLastSeen
-- [ ] `internal/service/agent.go` — RegisterOrGet(userID, name, machineID) — idempotent registration
-- [ ] `internal/http/agent.go` — `POST /api/agents/register` (JWT required), `GET /api/agents` (JWT required)
+- [x] `internal/repository/agent.go` — Create, GetByToken, GetByUserAndMachine, ListByUser, UpdateLastSeen
+- [x] `internal/service/agent.go` — RegisterOrGet(userID, name, machineID) — idempotent registration
+- [x] `internal/http/handler/agent.go` — `POST /api/agent` (JWT required)
 
 **RegisterOrGet** — key logic: if an agent already exists for user+machine, return existing token. Otherwise create a new one. This allows running setup repeatedly without duplication.
 
