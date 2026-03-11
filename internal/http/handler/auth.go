@@ -1,19 +1,23 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
-
-	"github.com/dragodui/my-deploy/internal/service"
 )
 
-type AuthHandler struct {
-	svc service.AuthService
+type AuthServicer interface {
+	SignUp(ctx context.Context, email, name, password string) (string, error)
+	SignIn(ctx context.Context, email, password string) (string, error)
 }
 
-func NewAuthHandler(svc *service.AuthService) *AuthHandler {
+type AuthHandler struct {
+	svc AuthServicer
+}
+
+func NewAuthHandler(svc AuthServicer) *AuthHandler {
 	return &AuthHandler{
-		svc: *svc,
+		svc: svc,
 	}
 }
 

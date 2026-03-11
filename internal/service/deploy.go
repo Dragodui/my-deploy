@@ -8,11 +8,21 @@ import (
 	"github.com/dragodui/my-deploy/internal/agent"
 	"github.com/dragodui/my-deploy/internal/models"
 	"github.com/dragodui/my-deploy/internal/registry"
-	"github.com/dragodui/my-deploy/internal/repository"
-	"github.com/dragodui/my-deploy/internal/templates"
 	"github.com/google/uuid"
 	"maps"
 )
+
+type DeployRepo interface {
+	Create(deploy *models.Deployment) error
+}
+
+type AgentRegistryProvider interface {
+	Get(token string) (*registry.AgentConn, bool)
+}
+
+type TemplateProvider interface {
+	Get(id string) (*models.AppTemplate, bool)
+}
 
 func mapToEnv(defaults, overrides map[string]string) []string {
 	env := map[string]string{}
@@ -30,12 +40,12 @@ func mapToEnv(defaults, overrides map[string]string) []string {
 }
 
 type DeployService struct {
-	repo      *repository.DeployRepository
-	registry  *registry.AgentRegistry
-	templates *templates.TemplatesRegistry
+	repo      DeployRepo
+	registry  AgentRegistryProvider
+	templates TemplateProvider
 }
 
-func NewDeployService(repo *repository.DeployRepository, reg *registry.AgentRegistry, templates *templates.TemplatesRegistry) *DeployService {
+func NewDeployService(repo DeployRepo, reg AgentRegistryProvider, templates TemplateProvider) *DeployService {
 	return &DeployService{repo, reg, templates}
 }
 

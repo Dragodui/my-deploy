@@ -5,15 +5,21 @@ import (
 	"errors"
 
 	"github.com/dragodui/my-deploy/internal/auth"
-	"github.com/dragodui/my-deploy/internal/repository"
+	"github.com/dragodui/my-deploy/internal/models"
 )
 
+type UserRepo interface {
+	GetByEmail(ctx context.Context, email string) (*models.User, error)
+	GetByID(ctx context.Context, id string) (*models.User, error)
+	Create(ctx context.Context, email, name, password string) (*models.User, error)
+}
+
 type AuthService struct {
-	userRepo  *repository.UserRepository
+	userRepo  UserRepo
 	jwtSecret string
 }
 
-func NewAuthService(userRepo *repository.UserRepository, jwtSecret string) *AuthService {
+func NewAuthService(userRepo UserRepo, jwtSecret string) *AuthService {
 	return &AuthService{userRepo, jwtSecret}
 }
 
