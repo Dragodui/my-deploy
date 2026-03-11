@@ -24,7 +24,7 @@ func NewWSHandler(reg *registry.AgentRegistry) *WSHandler {
 }
 
 func (h *WSHandler) HandleAgentWS(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.UserIDFromContext(r.Context())
+	agentID, ok := middleware.AgentIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -36,13 +36,13 @@ func (h *WSHandler) HandleAgentWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ac := h.registry.Register(userID, conn)
-	log.Printf("agent connected: userID=%s", userID)
+	ac := h.registry.Register(agentID, conn)
+	log.Printf("agent connected: %s", agentID)
 
 	defer func() {
-		h.registry.Unregister(userID)
+		h.registry.Unregister(agentID)
 		conn.Close()
-		log.Printf("agent disconnected: userID=%s", userID)
+		log.Printf("agent disconnected: %s", agentID)
 	}()
 
 	// read loop: receive results from agent

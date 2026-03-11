@@ -10,7 +10,7 @@ import (
 )
 
 type DeployServicer interface {
-	Create(ctx context.Context, agentToken string, req models.DeployRequest) (*models.Deployment, error)
+	Create(ctx context.Context, agentID string, req models.DeployRequest) (*models.Deployment, error)
 }
 
 type DeployRepoReader interface {
@@ -19,24 +19,29 @@ type DeployRepoReader interface {
 	Delete(ctx context.Context, id string) error
 }
 
-type DeployHandler struct {
-	svc  DeployServicer
-	repo DeployRepoReader
+type AgentOwnerChecker interface {
+	GetByID(ctx context.Context, id string) (*models.Agent, error)
 }
 
-func NewDeployHandler(svc DeployServicer, repo DeployRepoReader) *DeployHandler {
-	return &DeployHandler{svc: svc, repo: repo}
+type DeployHandler struct {
+	svc      DeployServicer
+	repo     DeployRepoReader
+	agentRepo AgentOwnerChecker
+}
+
+func NewDeployHandler(svc DeployServicer, repo DeployRepoReader, agentRepo AgentOwnerChecker) *DeployHandler {
+	return &DeployHandler{svc: svc, repo: repo, agentRepo: agentRepo}
 }
 
 func (h *DeployHandler) Create(w http.ResponseWriter, r *http.Request) {
-	_, ok := middleware.UserIDFromContext(r.Context())
+	userID, ok := middleware.UserIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	type createReq struct {
-		AgentToken string `json:"agent_token"`
+		AgentID string `json:"agent_id"`
 		models.DeployRequest
 	}
 	var req createReq
@@ -46,12 +51,22 @@ func (h *DeployHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.AgentToken == "" || req.Name == "" {
-		http.Error(w, "agent_token and name are required", http.StatusBadRequest)
+	if req.AgentID == "" || req.Name == "" {
+		http.Error(w, "agent_id and name are required", http.StatusBadRequest)
 		return
 	}
 
-	deploy, err := h.svc.Create(r.Context(), req.AgentToken, req.DeployRequest)
+	ag, err := h.agentRepo.GetByID(r.Context(), req.AgentID)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if ag == nil || ag.UserID != userID {
+		http.Error(w, "agent not found", http.StatusForbidden)
+		return
+	}
+
+	deploy, err := h.svc.Create(r.Context(), req.AgentID, req.DeployRequest)
 	if err != nil {
 		http.Error(w, "failed to create deployment", http.StatusInternalServerError)
 		return

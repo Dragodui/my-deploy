@@ -33,6 +33,22 @@ func (r *AgentRepository) Create(ctx context.Context, userID, token, name, machi
 	return &agent, nil
 }
 
+func (r *AgentRepository) GetByID(ctx context.Context, id string) (*models.Agent, error) {
+	var agent models.Agent
+
+	err := r.findAgent(ctx, &agent, "SELECT id, user_id, token, name, machine_id, last_seen, created_at FROM agents WHERE id = $1", id)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &agent, nil
+}
+
 func (r *AgentRepository) GetByToken(ctx context.Context, token string) (*models.Agent, error) {
 	var agent models.Agent
 

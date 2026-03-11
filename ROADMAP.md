@@ -110,9 +110,11 @@ go get github.com/golang-jwt/jwt/v5
 
 ## Phase 4: WebSocket Auth Hardening
 
-- [ ] `internal/http/ws.go` — validate token via `AgentRepository.GetByToken()`; return 401 if not found; update `last_seen`
-- [ ] `internal/registry/registry.go` — map key: `agentID` (UUID) instead of raw token
-- [ ] `internal/service/deploy.go` — use `agentID` instead of `agentToken`
+- [x] `internal/http/middleware/agent.go` — AgentAuth middleware, validates token via `AgentRepository.GetByToken()`; puts `agentID` in context
+- [x] `internal/http/ws.go` — register/unregister by `agentID` (from middleware context)
+- [x] `internal/registry/registry.go` — map key: `agentID` (UUID)
+- [x] `internal/service/deploy.go` — `Create` accepts `agentID`, finds agent in registry by ID
+- [x] `internal/http/handler/deploy.go` — accepts `agent_id` in request body
 
 ---
 

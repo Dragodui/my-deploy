@@ -46,15 +46,17 @@ func NewServer(cfg *config.Config) *http.ServeMux {
 	// deploy
 	deployRepo := repository.NewDeployRepository(database)
 	deployService := service.NewDeployService(deployRepo, agentRegistry, tplRegistry)
-	deployHandler := handler.NewDeployHandler(deployService, deployRepo)
+	deployHandler := handler.NewDeployHandler(deployService, deployRepo, agentRepo)
 	wsHandler := myhttp.NewWSHandler(agentRegistry)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK"))
 	})
+
 	jwtAuth := middleware.JWTAuth(cfg.JWTSecret)
-	mux.Handle("GET /ws/agent", jwtAuth(http.HandlerFunc(wsHandler.HandleAgentWS)))
+	agentTokenAuth := middleware.AgentAuth(agentRepo)
+	mux.Handle("GET /ws/agent", agentTokenAuth(http.HandlerFunc(wsHandler.HandleAgentWS)))
 
 	// auth
 	mux.HandleFunc("POST /api/auth/sign-up", authHandler.SignUp)

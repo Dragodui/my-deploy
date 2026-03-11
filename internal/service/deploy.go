@@ -56,8 +56,8 @@ func NewDeployService(repo DeployRepo, reg AgentRegistryProvider, templates Temp
 }
 
 // Create sends a deploy command to the connected agent.
-func (svc *DeployService) Create(ctx context.Context, agentToken string, req models.DeployRequest) (*models.Deployment, error) {
-	ac, ok := svc.registry.Get(agentToken)
+func (svc *DeployService) Create(ctx context.Context, agentID string, req models.DeployRequest) (*models.Deployment, error) {
+	ac, ok := svc.registry.Get(agentID)
 	if !ok {
 		return nil, fmt.Errorf("agent not connected")
 	}
