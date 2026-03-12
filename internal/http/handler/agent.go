@@ -11,6 +11,7 @@ import (
 
 type AgentServicer interface {
 	RegisterOrGet(ctx context.Context, userID, name, machineID string) (*models.Agent, error)
+	ListByUser(ctx context.Context, userID string) ([]models.Agent, error)
 }
 
 type AgentHandler struct {
@@ -62,4 +63,29 @@ func (h *AgentHandler) RegisterOrGet(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response{
 		Agent: agent,
 	})
+}
+
+func (h *AgentHandler) ListByUser(w http.ResponseWriter, r *http.Request) {
+
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	agents, err := h.svc.ListByUser(r.Context(), userID)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	type response struct {
+		Agents []models.Agent `json:"agents"`
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	json.NewEncoder(w).Encode(response{
+		Agents: agents,
+	})
+
 }

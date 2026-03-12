@@ -64,6 +64,7 @@ func NewServer(cfg *config.Config) *http.ServeMux {
 
 	// agent
 	mux.Handle("POST /api/agent", jwtAuth(http.HandlerFunc(agentHandler.RegisterOrGet)))
+	mux.Handle("GET /api/agents", jwtAuth(http.HandlerFunc(agentHandler.ListByUser)))
 
 	// deploy
 	mux.Handle("POST /api/deployments", jwtAuth(http.HandlerFunc(deployHandler.Create)))

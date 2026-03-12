@@ -53,3 +53,7 @@ func (svc *AgentService) RegisterOrGet(ctx context.Context, userID, name, machin
 
 	return agent, err
 }
+
+func (svc *AgentService) ListByUser(ctx context.Context, userID string) ([]models.Agent, error) {
+	return svc.agentRepo.ListByUser(ctx, userID)
+}
