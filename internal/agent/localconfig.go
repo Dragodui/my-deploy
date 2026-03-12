@@ -9,8 +9,8 @@ import (
 const DefaultServerURL = "http://localhost:8080"
 
 type LocalConfig struct {
-	UserName string `json:"user_name"`
-	AgentName string `json:"agent_name"`
+	UserName   string `json:"user_name"`
+	AgentName  string `json:"agent_name"`
 	URL        string `json:"url"`
 	AgentToken string `json:"agent_token"`
 	JWT        string `json:"jwt"`
@@ -66,4 +66,14 @@ func Save(config *LocalConfig) error {
 	}
 
 	return nil
+}
+
+func Delete() error {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	configPath := filepath.Join(home, ".mydeploy", "config.json")
+	return os.Remove(configPath)
 }
