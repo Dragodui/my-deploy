@@ -4,6 +4,8 @@ import (
 	"log"
 	"os"
 	"strconv"
+
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -13,6 +15,9 @@ type Config struct {
 }
 
 func NewConfig() *Config {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Error loading env")
+	}
 	port := 8080
 
 	portStr := os.Getenv("PORT")
