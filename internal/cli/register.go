@@ -12,8 +12,8 @@ import (
 
 func signUpCmd(api *agent.APIClient, email, name, password string) tea.Cmd {
 	return func() tea.Msg {
-		token, err := api.SignUp(email, name, password)
-		return AuthResultMsg{token: token, err: err}
+		token, userName, err := api.SignUp(email, name, password)
+		return AuthResultMsg{token: token, name: userName, err: err}
 	}
 }
 
@@ -106,8 +106,9 @@ func (m RegisterModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		config := &agent.LocalConfig{
-			URL: agent.DefaultServerURL,
-			JWT: msg.token,
+			URL:      agent.DefaultServerURL,
+			JWT:      msg.token,
+			UserName: msg.name,
 		}
 		if err := agent.Save(config); err != nil {
 			m.err = fmt.Errorf("failed to save config: %w", err)

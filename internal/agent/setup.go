@@ -41,7 +41,7 @@ func Setup(api *APIClient) (*LocalConfig, error) {
 		choice := prompt(scanner, "Sign in or Sign up? [in/up]:")
 		switch choice {
 		case "in":
-			token, err := api.SignIn(email, password)
+			token, _, err := api.SignIn(email, password)
 			if err != nil {
 				fmt.Printf("Sign in failed: %v. Try again.\n", err)
 				continue
@@ -49,7 +49,7 @@ func Setup(api *APIClient) (*LocalConfig, error) {
 			jwt = token
 		case "up":
 			name := prompt(scanner, "Your name:")
-			token, err := api.SignUp(email, name, password)
+			token, _, err := api.SignUp(email, name, password)
 			if err != nil {
 				fmt.Printf("Sign up failed: %v. Try again.\n", err)
 				continue

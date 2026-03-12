@@ -50,7 +50,7 @@ func NewAPIClient(url string) *APIClient {
 	}
 }
 
-func (api *APIClient) SignIn(email, password string) (string, error) {
+func (api *APIClient) SignIn(email, password string) (string, string, error) {
 	body, _ := json.Marshal(map[string]string{
 		"email":    email,
 		"password": password,
@@ -58,26 +58,27 @@ func (api *APIClient) SignIn(email, password string) (string, error) {
 
 	resp, err := api.HTTPClient.Post(api.ServerURL+"/api/auth/sign-in", "application/json", bytes.NewReader(body))
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("sign-in failed: %s — %s", resp.Status, strings.TrimSpace(string(respBody)))
+		return "", "", fmt.Errorf("sign-in failed: %s — %s", resp.Status, strings.TrimSpace(string(respBody)))
 	}
 
 	var result struct {
 		Token string `json:"token"`
+		Name  string `json:"name"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	return result.Token, nil
+	return result.Token, result.Name, nil
 }
 
-func (api *APIClient) SignUp(email, name, password string) (string, error) {
+func (api *APIClient) SignUp(email, name, password string) (string, string, error) {
 	body, _ := json.Marshal(map[string]string{
 		"email":    email,
 		"name":     name,
@@ -86,23 +87,24 @@ func (api *APIClient) SignUp(email, name, password string) (string, error) {
 
 	resp, err := api.HTTPClient.Post(api.ServerURL+"/api/auth/sign-up", "application/json", bytes.NewReader(body))
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("sign-up failed: %s — %s", resp.Status, strings.TrimSpace(string(body)))
+		return "", "", fmt.Errorf("sign-up failed: %s — %s", resp.Status, strings.TrimSpace(string(body)))
 	}
 
 	var result struct {
 		Token string `json:"token"`
+		Name  string `json:"name"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	return result.Token, nil
+	return result.Token, result.Name, nil
 }
 
 func (api *APIClient) RegisterAgent(jwt, name, machineID string) (string, error) {
@@ -139,6 +141,38 @@ func (api *APIClient) RegisterAgent(jwt, name, machineID string) (string, error)
 	}
 
 	return result.Agent.Token, nil
+}
+
+type MeResponse struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+func (api *APIClient) Me(jwt string) (*MeResponse, error) {
+	req, err := http.NewRequest("GET", api.ServerURL+"/api/me", nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+jwt)
+
+	resp, err := api.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("me failed: %s — %s", resp.Status, strings.TrimSpace(string(respBody)))
+	}
+
+	var result MeResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
 
 func (api *APIClient) ListAgents(jwt string) ([]models.Agent, error) {

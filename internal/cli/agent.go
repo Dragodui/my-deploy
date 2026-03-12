@@ -14,6 +14,7 @@ import (
 
 type AgentCreateResultMsg struct {
 	agentToken string
+	agentName  string
 	machineID  string
 	dockerHost string
 	err        error
@@ -69,7 +70,7 @@ func registerAgentCmd(api *agent.APIClient, name, dockerHost, jwt string) tea.Cm
 
 		agentToken, err := api.RegisterAgent(jwt, name, machineID)
 
-		return AgentCreateResultMsg{agentToken: agentToken, machineID: machineID, dockerHost: dockerHost, err: err}
+		return AgentCreateResultMsg{agentToken: agentToken, agentName: name, machineID: machineID, dockerHost: dockerHost, err: err}
 	}
 }
 
@@ -121,6 +122,7 @@ func (m AgentCreateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				config.AgentToken = selected.Token
 				config.MachineID = selected.MachineID
+				config.AgentName = selected.Name
 				if err := agent.Save(config); err != nil {
 					m.err = fmt.Errorf("failed to save config: %w", err)
 					return m, nil
@@ -198,6 +200,7 @@ func (m AgentCreateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		config.AgentToken = msg.agentToken
+		config.AgentName = msg.agentName
 		config.MachineID = msg.machineID
 		config.DockerHost = msg.dockerHost
 

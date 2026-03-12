@@ -12,13 +12,14 @@ import (
 
 type AuthResultMsg struct {
 	token string
+	name  string
 	err   error
 }
 
 func signInCmd(api *agent.APIClient, email, password string) tea.Cmd {
 	return func() tea.Msg {
-		token, err := api.SignIn(email, password)
-		return AuthResultMsg{token: token, err: err}
+		token, name, err := api.SignIn(email, password)
+		return AuthResultMsg{token: token, name: name, err: err}
 	}
 }
 
@@ -106,8 +107,9 @@ func (m LoginModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		config := &agent.LocalConfig{
-			URL: agent.DefaultServerURL,
-			JWT: msg.token,
+			URL:      agent.DefaultServerURL,
+			JWT:      msg.token,
+			UserName: msg.name,
 		}
 		if err := agent.Save(config); err != nil {
 			m.err = fmt.Errorf("failed to save config: %w", err)

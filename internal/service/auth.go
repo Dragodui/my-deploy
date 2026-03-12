@@ -24,47 +24,51 @@ func NewAuthService(userRepo UserRepo, jwtSecret string) *AuthService {
 	return &AuthService{userRepo, jwtSecret}
 }
 
-func (svc *AuthService) SignUp(ctx context.Context, email, name, password string) (string, error) {
+func (svc *AuthService) SignUp(ctx context.Context, email, name, password string) (string, string, error) {
 	exists, err := svc.userRepo.GetByEmail(ctx, email)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return "", err
+		return "", "", err
 	}
 
 	if exists != nil {
-		return "", errors.New("user already exists")
+		return "", "", errors.New("user already exists")
 	}
 
 	user, err := svc.userRepo.Create(ctx, email, name, password)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	token, err := auth.GenerateToken(user.ID, svc.jwtSecret)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	return token, nil
+	return token, user.Name, nil
 }
 
-func (svc *AuthService) SignIn(ctx context.Context, email, password string) (string, error) {
+func (svc *AuthService) Me(ctx context.Context, userID string) (*models.User, error) {
+	return svc.userRepo.GetByID(ctx, userID)
+}
+
+func (svc *AuthService) SignIn(ctx context.Context, email, password string) (string, string, error) {
 	user, err := svc.userRepo.GetByEmail(ctx, email)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	if user == nil {
-		return "", errors.New("invalid credentials")
+		return "", "", errors.New("invalid credentials")
 	}
 
 	if !auth.CheckPassword(password, user.Password) {
-		return "", errors.New("invalid credentials")
+		return "", "", errors.New("invalid credentials")
 	}
 
 	token, err := auth.GenerateToken(user.ID, svc.jwtSecret)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	return token, nil
+	return token, user.Name, nil
 }

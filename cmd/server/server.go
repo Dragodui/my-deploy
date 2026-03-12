@@ -61,6 +61,7 @@ func NewServer(cfg *config.Config) *http.ServeMux {
 	// auth
 	mux.HandleFunc("POST /api/auth/sign-up", authHandler.SignUp)
 	mux.HandleFunc("POST /api/auth/sign-in", authHandler.SignIn)
+	mux.Handle("GET /api/me", jwtAuth(http.HandlerFunc(authHandler.Me)))
 
 	// agent
 	mux.Handle("POST /api/agent", jwtAuth(http.HandlerFunc(agentHandler.RegisterOrGet)))
