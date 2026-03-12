@@ -27,8 +27,20 @@ func main() {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
 		}
-		return
+		// reload config after auth (now has JWT)
+		config, err = agent.Load()
+		if err != nil || config == nil {
+			log.Fatalf("Error loading config after auth: %v", err)
+		}
 	}
 
-	fmt.Println("Authenticated. Ready to go!")
+	if config.AgentToken == "" {
+		agentModel := cli.NewAgentCreateModel(api)
+		if _, err := tea.NewProgram(agentModel).Run(); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+	}
+
+	fmt.Println("Ready to go!")
 }
