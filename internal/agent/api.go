@@ -2,12 +2,39 @@ package agent
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
+	"time"
 )
+
+func IsJWTExpired(token string) bool {
+	if token == "" {
+		return true
+	}
+	parts := strings.Split(token, ".")
+	if len(parts) < 2 {
+		return true
+	}
+
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return true
+	}
+
+	var claims struct {
+		Exp int64 `json:"exp"`
+	}
+
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return true
+	}
+
+	return time.Now().Unix() > claims.Exp
+}
 
 type APIClient struct {
 	ServerURL  string
