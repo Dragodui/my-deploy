@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/dragodui/my-deploy/internal/models"
 )
 
 func IsJWTExpired(token string) bool {
@@ -137,4 +139,34 @@ func (api *APIClient) RegisterAgent(jwt, name, machineID string) (string, error)
 	}
 
 	return result.Agent.Token, nil
+}
+
+func (api *APIClient) ListAgents(jwt string) ([]models.Agent, error) {
+
+	req, err := http.NewRequest("GET", api.ServerURL+"/api/agents", nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+jwt)
+
+	resp, err := api.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("list agents failed: %s — %s", resp.Status, strings.TrimSpace(string(respBody)))
+	}
+
+	var result struct {
+		Agents []models.Agent
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	return result.Agents, nil
 }
