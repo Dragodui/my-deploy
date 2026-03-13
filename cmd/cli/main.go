@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/dragodui/my-deploy/internal/agent"
 	"github.com/dragodui/my-deploy/internal/cli"
+	"github.com/dragodui/my-deploy/internal/daemon"
 )
 
 func main() {
@@ -47,6 +48,15 @@ func main() {
 		if err != nil {
 			log.Fatalf("Error loading config: %v", err)
 		}
+
+		if config.AgentMode != "remote" {
+			if running, _ := daemon.IsRunning(); !running {
+				if binary, err := daemon.FindAgentBinary(); err == nil {
+					daemon.StartAgent(binary)
+				}
+			}
+		}
+
 		homeModel := cli.NewHomeModel(config)
 		result, err := tea.NewProgram(homeModel).Run()
 		if err != nil {

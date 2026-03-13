@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/dragodui/my-deploy/internal/agent"
+	"github.com/dragodui/my-deploy/internal/daemon"
 	"github.com/dragodui/my-deploy/internal/models"
 )
 
@@ -26,13 +27,13 @@ type AgentListResultMsg struct {
 }
 
 type AgentCreateModel struct {
-	api        *agent.APIClient
-	inputs     []textinput.Model
-	focusIndex int
-	spinner    spinner.Model
-	state      string
-	agents     []models.Agent
-	cursor     int
+	api          *agent.APIClient
+	inputs       []textinput.Model
+	focusIndex   int
+	spinner      spinner.Model
+	state        string
+	agents       []models.Agent
+	cursor       int
 	loading      bool
 	err          error
 	done         bool
@@ -208,6 +209,13 @@ func (m AgentCreateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.err = fmt.Errorf("failed to save config: %w", err)
 			return m, nil
 		}
+
+		// run agent
+		binary, err := daemon.FindAgentBinary()
+		if err == nil {
+			daemon.StartAgent(binary)
+		}
+
 		m.done = true
 		return m, tea.Quit
 	case spinner.TickMsg:
@@ -250,9 +258,17 @@ func (m AgentCreateModel) View() string {
 		if m.selectedName != "" {
 			doneMsg = "Agent selected: " + m.selectedName
 		}
+		// guide to run agent remotely
+		cfg, _ := agent.Load()
+		remoteHint := ""
+		if m.selectedName == "" && cfg != nil {
+			remoteHint = "\n\n" + Subtle.Render(
+				"To run on a remote server:\n  mydeploy-agent --url "+cfg.URL+" --token "+cfg.AgentToken)
+		}
 		return Container.Render(
 			Success.Render(doneMsg) + "\n" +
-				Subtle.Render("Config saved to ~/.mydeploy/config.json"),
+				Subtle.Render("Config saved to ~/.mydeploy/config.json") +
+				remoteHint,
 		)
 	}
 	if m.state == "loading" {

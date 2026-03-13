@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -14,19 +15,24 @@ import (
 )
 
 func main() {
-	apiClient := agent.NewAPIClient(agent.DefaultServerURL)
-	config, err := agent.Load()
-	if err != nil {
-		fmt.Printf("Error in config setup: %v", err)
-		return
-	}
-	if config == nil {
-		config, err = agent.Setup(apiClient)
-	}
+	token := flag.String("token", "", "agent token")
+	url := flag.String("url", "", "server URL")
+	flag.Parse()
+	var config *agent.LocalConfig
+	var err error
 
-	if err != nil {
-		fmt.Printf("Error in config setup: %v", err)
-		return
+	if *token != "" && *url != "" {
+		config = &agent.LocalConfig{
+			AgentToken: *token,
+			URL:        *url,
+		}
+		agent.Save(config)
+	} else {
+		config, err = agent.Load()
+		if err != nil || config == nil {
+			fmt.Println("No config found. Run with --token and --url")
+			os.Exit(1)
+		}
 	}
 
 	opts := []client.Opt{}
@@ -56,6 +62,6 @@ func main() {
 		cancel()
 	}()
 
-	log.Printf("agent starting, connecting to %s", agent.DefaultServerURL)
+	log.Printf("agent starting, connecting to %s", config.URL)
 	a.Run(ctx)
 }

@@ -16,6 +16,7 @@ type LocalConfig struct {
 	JWT        string `json:"jwt"`
 	MachineID  string `json:"machine_id"`
 	DockerHost string `json:"docker_host"`
+	AgentMode string `json:"agent_mode"`
 }
 
 func Load() (*LocalConfig, error) {
