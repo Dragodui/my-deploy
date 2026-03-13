@@ -13,11 +13,11 @@ A self-hosted deployment platform. Deploy Docker containers to remote machines t
  TUI        daemon on target machine
 ```
 
-**Server** (`cmd/main.go`) — REST API, manages users, agents, and deployments. Stores state in PostgreSQL.
+**Server** (`cmd/main.go`) — REST API, manages users, agents, and deployments. Stores state in PostgreSQL. Logs to stdout and `logs/server.log`.
 
-**Agent** (`cmd/agent/main.go`) — runs on the target machine with Docker. Connects to the server via WebSocket, receives deploy commands, and manages containers.
+**Agent** (`cmd/agent/main.go`) — runs on the target machine with Docker. Connects to the server via WebSocket, receives deploy commands, and manages containers. Supports local (daemon) and remote modes.
 
-**CLI** (`cmd/cli/main.go`) — interactive TUI client (built with [Bubble Tea](https://github.com/charmbracelet/bubbletea)). Register, log in, select an agent, and create deployments.
+**CLI** (`cmd/cli/main.go`) — interactive TUI client (built with [Bubble Tea](https://github.com/charmbracelet/bubbletea)). Register, log in, manage agents, create deployments from templates or custom images, and view deployment status.
 
 ## Getting Started
 
@@ -36,8 +36,14 @@ export JWT_SECRET="your-secret"
 export PORT=8080
 
 # Run the server
-cd my-deploy
 go run cmd/main.go
+```
+
+Or with Docker Compose:
+
+```bash
+# Configure .env with DB_DSN, JWT_SECRET, PORT
+docker compose up --build
 ```
 
 Migrations run automatically on startup from the `migrations/` directory.
@@ -51,30 +57,48 @@ go run cmd/cli/main.go
 On first launch the CLI will guide you through:
 
 1. **Registration / Login** — create an account or sign in
-2. **Agent setup** — select an existing agent or create a new one
-3. **Home screen** — main menu with deploy options
+2. **Agent setup** — select an existing agent or create a new one (with optional Docker host)
+3. **Home screen** — main menu:
+   - **Deploy** — create a deployment from a template or custom Docker image
+   - **Deploy list** — view all deployments with live status
+   - **Start / Stop agent** — manage the local agent daemon
+   - **Change agent** — switch to a different agent
+   - **Logout**
 
 Config is saved to `~/.mydeploy/config.json`.
 
 ### Agent
 
+**Local mode** (managed by CLI as a daemon):
+
+The CLI automatically starts the agent daemon after creating an agent. You can also start/stop it from the home menu. Daemon PID and logs are stored in `~/.mydeploy/`.
+
+**Remote mode** (standalone on a remote server):
+
 ```bash
-go run cmd/agent/main.go
+go run cmd/agent/main.go --url http://your-server:8080 --token <agent-token>
 ```
 
-On first launch the agent runs an interactive setup (email, password, agent name, Docker host), then connects to the server via WebSocket and waits for commands.
+The agent token is displayed after agent creation in the CLI. On subsequent runs, the agent reads its config from `~/.mydeploy/config.json`.
 
-Config is saved to `~/.mydeploy/config.json`.
+## App Templates
+
+Templates define pre-configured deployments as YAML files in `internal/templates/`. Each template specifies an image, ports, volumes, environment variables, and resource limits.
+
+Available templates:
+- **Minecraft Server** — Vanilla Minecraft Java server (`itzg/minecraft-server`)
 
 ## API Endpoints
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
+| GET | `/health` | - | Health check |
 | POST | `/api/auth/sign-up` | - | Register |
 | POST | `/api/auth/sign-in` | - | Login |
 | GET | `/api/me` | JWT | Current user info |
 | POST | `/api/agent` | JWT | Register or get agent |
 | GET | `/api/agents` | JWT | List user's agents |
+| GET | `/api/templates` | JWT | List available app templates |
 | POST | `/api/deployments` | JWT | Create deployment |
 | GET | `/api/deployments?agent_id=` | JWT | List deployments |
 | GET | `/api/deployments/{id}` | JWT | Get deployment |
@@ -90,23 +114,26 @@ cmd/
   agent/main.go        agent entry point
   server/server.go     HTTP router & dependency wiring
 internal/
-  agent/               agent client, config, WebSocket, setup
+  agent/               agent client, config, WebSocket handler, API client
   auth/                JWT generation, password hashing
-  cli/                 TUI screens (login, register, agent, home)
-  config/              server config
-  db/                  database connection & migrations
+  cli/                 TUI screens (login, register, agent, home, deploy, deploy list)
+  config/              server config (env-based)
+  daemon/              agent daemon management (start, stop, status, PID tracking)
+  db/                  database connection & auto-migrations
   http/                WebSocket handler
-  http/handler/        HTTP handlers (auth, agent, deploy)
-  http/middleware/      JWT & agent token middleware
-  models/              domain models (User, Agent, Deployment)
-  registry/            in-memory agent connection registry
+  http/handler/        HTTP handlers (auth, agent, deploy, templates)
+  http/middleware/     JWT & agent token middleware
+  models/              domain models (User, Agent, Deployment, AppTemplate)
+  registry/            in-memory agent WebSocket connection registry
   repository/          database queries
-  service/             business logic
-  templates/           app templates (YAML-based)
+  service/             business logic (auth, agent, deploy, templates)
+  templates/           app template definitions (YAML)
+migrations/            SQL migration files (auto-applied on startup)
 ```
 
 ## Tech Stack
 
-- **Server**: Go stdlib `net/http`, PostgreSQL, `golang-jwt/jwt`, `gorilla/websocket`
+- **Server**: Go stdlib `net/http`, PostgreSQL (`lib/pq`), `golang-jwt/jwt`, `gorilla/websocket`
 - **CLI**: [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Bubbles](https://github.com/charmbracelet/bubbles), [Lip Gloss](https://github.com/charmbracelet/lipgloss)
 - **Agent**: Docker SDK (`moby/moby/client`), `gorilla/websocket`
+- **Config**: `goccy/go-yaml`, `joho/godotenv`
