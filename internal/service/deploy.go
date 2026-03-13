@@ -45,6 +45,17 @@ func mapToEnv(defaults, overrides map[string]string) []string {
 	return result
 }
 
+func mergeEnv(defaults, overrides map[string]string) map[string]string {
+	merged := make(map[string]string, len(defaults)+len(overrides))
+	for k, v := range defaults {
+		merged[k] = v
+	}
+	for k, v := range overrides {
+		merged[k] = v
+	}
+	return merged
+}
+
 type DeployService struct {
 	repo      DeployRepo
 	registry  AgentRegistryProvider
@@ -156,13 +167,22 @@ func (svc *DeployService) Create(ctx context.Context, agentID string, req models
 	return svc.repo.Create(ctx, deploy)
 }
 
-func mergeEnv(defaults, overrides map[string]string) map[string]string {
-	merged := make(map[string]string, len(defaults)+len(overrides))
-	for k, v := range defaults {
-		merged[k] = v
-	}
-	for k, v := range overrides {
-		merged[k] = v
-	}
-	return merged
+func (svc *DeployService) GetByID(ctx context.Context, id string) (*models.Deployment, error) {
+	return svc.repo.GetByID(ctx, id)
+}
+
+func (svc *DeployService) ListByAgent(ctx context.Context, agentID string) ([]models.Deployment, error) {
+	return svc.repo.ListByAgent(ctx, agentID)
+}
+
+func (svc *DeployService) UpdateStatus(ctx context.Context, id, status string) error {
+	return svc.repo.UpdateStatus(ctx, id, status)
+}
+
+func (svc *DeployService) UpdateContainerID(ctx context.Context, id, containerID string) error {
+	return svc.repo.UpdateContainerID(ctx, id, containerID)
+}
+
+func (svc *DeployService) Delete(ctx context.Context, id string) error {
+	return svc.repo.Delete(ctx, id)
 }

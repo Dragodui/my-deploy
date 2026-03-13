@@ -1,6 +1,7 @@
 package templates
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 
@@ -41,4 +42,12 @@ func NewTemplatesRegistry(dir string) (*TemplatesRegistry, error) {
 func (r *TemplatesRegistry) Get(id string) (*models.AppTemplate, bool) {
 	tpl, ok := r.templates[id]
 	return tpl, ok
+}
+
+func (r *TemplatesRegistry) GetAll(ctx context.Context) []*models.AppTemplate {
+	templates := make([]*models.AppTemplate, 0, len(r.templates))
+	for _, v := range r.templates {
+		templates = append(templates, v)
+	}
+	return templates
 }

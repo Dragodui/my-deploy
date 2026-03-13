@@ -11,11 +11,10 @@ import (
 
 type DeployServicer interface {
 	Create(ctx context.Context, agentID string, req models.DeployRequest) (*models.Deployment, error)
-}
-
-type DeployRepoReader interface {
 	GetByID(ctx context.Context, id string) (*models.Deployment, error)
 	ListByAgent(ctx context.Context, agentID string) ([]models.Deployment, error)
+	UpdateStatus(ctx context.Context, id, status string) error
+	UpdateContainerID(ctx context.Context, id, containerID string) error
 	Delete(ctx context.Context, id string) error
 }
 
@@ -25,12 +24,11 @@ type AgentOwnerChecker interface {
 
 type DeployHandler struct {
 	svc      DeployServicer
-	repo     DeployRepoReader
-	agentRepo AgentOwnerChecker
+	agentSvc AgentOwnerChecker
 }
 
-func NewDeployHandler(svc DeployServicer, repo DeployRepoReader, agentRepo AgentOwnerChecker) *DeployHandler {
-	return &DeployHandler{svc: svc, repo: repo, agentRepo: agentRepo}
+func NewDeployHandler(svc DeployServicer, agentSvc AgentOwnerChecker) *DeployHandler {
+	return &DeployHandler{svc: svc, agentSvc: agentSvc}
 }
 
 func (h *DeployHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -56,7 +54,7 @@ func (h *DeployHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ag, err := h.agentRepo.GetByID(r.Context(), req.AgentID)
+	ag, err := h.agentSvc.GetByID(r.Context(), req.AgentID)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
@@ -89,7 +87,7 @@ func (h *DeployHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deploy, err := h.repo.GetByID(r.Context(), id)
+	deploy, err := h.svc.GetByID(r.Context(), id)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
@@ -116,7 +114,7 @@ func (h *DeployHandler) ListByAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deployments, err := h.repo.ListByAgent(r.Context(), agentID)
+	deployments, err := h.svc.ListByAgent(r.Context(), agentID)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
@@ -139,7 +137,7 @@ func (h *DeployHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.repo.Delete(r.Context(), id); err != nil {
+	if err := h.svc.Delete(r.Context(), id); err != nil {
 		http.Error(w, "failed to delete deployment", http.StatusInternalServerError)
 		return
 	}

@@ -9,6 +9,7 @@ import (
 )
 
 type AgentRepo interface {
+	GetByID(ctx context.Context, id string) (*models.Agent, error)
 	GetByUserAndMachine(ctx context.Context, userID, machineID string) (*models.Agent, error)
 	GetByToken(ctx context.Context, token string) (*models.Agent, error)
 	Create(ctx context.Context, userID, token, name, machineID string) (*models.Agent, error)
@@ -52,6 +53,10 @@ func (svc *AgentService) RegisterOrGet(ctx context.Context, userID, name, machin
 	}
 
 	return agent, err
+}
+
+func (svc *AgentService) GetByID(ctx context.Context, id string) (*models.Agent, error) {
+	return svc.agentRepo.GetByID(ctx, id)
 }
 
 func (svc *AgentService) ListByUser(ctx context.Context, userID string) ([]models.Agent, error) {
