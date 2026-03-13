@@ -1,5 +1,14 @@
 # MyDeploy
 
+```
+       .
+      ":"                 __  ___     ___           __
+    ___:____     |"\/"|  /  |/  /_ __/ _ \___ ___  / /__  __ __
+  ,'        `.    \  /  / /|_/ / // / // / -_) _ \/ / _ \/ // /
+  |  O        \___/  | /_/  /_/\_, /____/\__/ .__/_/\___/\_, /
+~^~^~^~^~^~^~^~^~^~^~^~       /___/        /_/          /___/
+```
+
 A self-hosted deployment platform. Deploy Docker containers to remote machines through a central server using a beautiful TUI client.
 
 ## Architecture
@@ -137,3 +146,37 @@ migrations/            SQL migration files (auto-applied on startup)
 - **CLI**: [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Bubbles](https://github.com/charmbracelet/bubbles), [Lip Gloss](https://github.com/charmbracelet/lipgloss)
 - **Agent**: Docker SDK (`moby/moby/client`), `gorilla/websocket`
 - **Config**: `goccy/go-yaml`, `joho/godotenv`
+
+## TODO
+
+### Done
+
+- [x] User registration and JWT authentication
+- [x] Agent registration and WebSocket connection
+- [x] Deploy from custom Docker image (name, image, ports, env)
+- [x] Deploy from YAML app templates (Minecraft)
+- [x] Deployment list with live status
+- [x] Delete deployments
+- [x] Agent daemon management (start/stop from TUI)
+- [x] Local and remote agent modes
+- [x] Interactive TUI with Bubble Tea
+- [x] Auto-migrations on server startup
+- [x] Docker Compose support
+
+### Planned
+
+- [ ] Microservice architecture (split server into auth, deploy, agent gateway services)
+- [ ] Desktop app (Electron / Tauri / Wails)
+- [ ] Web dashboard as an alternative to TUI
+- [ ] Container logs streaming in TUI
+- [ ] Restart / redeploy from CLI
+- [ ] Agent health monitoring and auto-reconnect status in UI
+- [ ] More app templates (PostgreSQL, Redis, Nginx, Node.js)
+- [ ] Environment variables management per agent
+- [ ] Deployment rollback
+- [ ] Multi-user access control (teams, roles)
+- [ ] HTTPS / TLS support for server and agent connections
+- [ ] CI/CD integration (deploy on git push)
+- [ ] Resource usage monitoring (CPU, memory, disk)
+- [ ] Container volume management in CLI
+- [ ] Notifications (Telegram, Discord, webhooks)
