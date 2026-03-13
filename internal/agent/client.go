@@ -62,40 +62,52 @@ func (a *Agent) connect(ctx context.Context) error {
 	// ping loop
 	go a.pingLoop(ctx, conn)
 
-	// read loop
+	// read messages in a goroutine so we can select on ctx.Done
+	type readResult struct {
+		msg []byte
+		err error
+	}
+	msgCh := make(chan readResult)
+
+	go func() {
+		for {
+			_, msg, err := conn.ReadMessage()
+			msgCh <- readResult{msg, err}
+			if err != nil {
+				return
+			}
+		}
+	}()
+
 	for {
 		select {
 		case <-ctx.Done():
 			conn.WriteMessage(websocket.CloseMessage,
 				websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 			return ctx.Err()
-		default:
-		}
-
-		_, msg, err := conn.ReadMessage()
-		if err != nil {
-			return err
-		}
-
-		var cmd Command
-		if err := json.Unmarshal(msg, &cmd); err != nil {
-			log.Printf("invalid command: %v", err)
-			continue
-		}
-
-		if cmd.Type == "pong" {
-			continue
-		}
-
-		// handle command in goroutine so we don't block reads
-		go func(cmd Command) {
-			result := a.handler.Handle(ctx, cmd)
-
-			data, _ := json.Marshal(result)
-			if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
-				log.Printf("failed to send result: %v", err)
+		case r := <-msgCh:
+			if r.err != nil {
+				return r.err
 			}
-		}(cmd)
+
+			var cmd Command
+			if err := json.Unmarshal(r.msg, &cmd); err != nil {
+				log.Printf("invalid command: %v", err)
+				continue
+			}
+
+			if cmd.Type == "pong" {
+				continue
+			}
+
+			go func(cmd Command) {
+				result := a.handler.Handle(ctx, cmd)
+				data, _ := json.Marshal(result)
+				if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
+					log.Printf("failed to send result: %v", err)
+				}
+			}(cmd)
+		}
 	}
 }
 

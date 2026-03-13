@@ -73,6 +73,20 @@ func main() {
 				os.Exit(1)
 			}
 			continue
+		case "deploy":
+			deployModel := cli.NewDeployModel(api, config)
+			if _, err := tea.NewProgram(deployModel).Run(); err != nil {
+				fmt.Printf("Error: %v\n", err)
+				os.Exit(1)
+			}
+			continue
+		case "deploy_list":
+			listModel := cli.NewDeployListModel(api, config)
+			if _, err := tea.NewProgram(listModel).Run(); err != nil {
+				fmt.Printf("Error: %v\n", err)
+				os.Exit(1)
+			}
+			continue
 		default:
 			return
 		}

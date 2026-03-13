@@ -78,9 +78,11 @@ func (m HomeModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.action = "change_agent"
 				return m, tea.Quit
 			case "Deploy":
-				// todo
+				m.action = "deploy"
+				return m, tea.Quit
 			case "Deploy list":
-				// todo
+				m.action = "deploy_list"
+				return m, tea.Quit
 			case "Start agent":
 				binary, err := daemon.FindAgentBinary()
 				if err != nil {

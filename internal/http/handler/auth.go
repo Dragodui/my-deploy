@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/dragodui/my-deploy/internal/http/middleware"
@@ -73,6 +74,7 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.svc.Me(r.Context(), userID)
 	if err != nil {
+		log.Printf("[ERROR] auth.Me: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}

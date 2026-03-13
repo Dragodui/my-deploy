@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/dragodui/my-deploy/internal/http/middleware"
@@ -56,6 +57,7 @@ func (h *DeployHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	ag, err := h.agentSvc.GetByID(r.Context(), req.AgentID)
 	if err != nil {
+		log.Printf("[ERROR] deploy.Create agent lookup: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
@@ -66,12 +68,18 @@ func (h *DeployHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	deploy, err := h.svc.Create(r.Context(), req.AgentID, req.DeployRequest)
 	if err != nil {
+		log.Printf("[ERROR] deploy.Create: %v", err)
 		http.Error(w, "failed to create deployment", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(deploy)
+	type response struct {
+		Deployment models.Deployment `json:"deployment"`
+	}
+	json.NewEncoder(w).Encode(response{
+		Deployment: *deploy,
+	})
 }
 
 func (h *DeployHandler) GetByID(w http.ResponseWriter, r *http.Request) {
@@ -89,6 +97,7 @@ func (h *DeployHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 	deploy, err := h.svc.GetByID(r.Context(), id)
 	if err != nil {
+		log.Printf("[ERROR] deploy.GetByID: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
@@ -116,6 +125,7 @@ func (h *DeployHandler) ListByAgent(w http.ResponseWriter, r *http.Request) {
 
 	deployments, err := h.svc.ListByAgent(r.Context(), agentID)
 	if err != nil {
+		log.Printf("[ERROR] deploy.ListByAgent: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
@@ -138,6 +148,7 @@ func (h *DeployHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.svc.Delete(r.Context(), id); err != nil {
+		log.Printf("[ERROR] deploy.Delete: %v", err)
 		http.Error(w, "failed to delete deployment", http.StatusInternalServerError)
 		return
 	}

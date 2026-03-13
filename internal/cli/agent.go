@@ -14,6 +14,7 @@ import (
 )
 
 type AgentCreateResultMsg struct {
+	agentID    string
 	agentToken string
 	agentName  string
 	machineID  string
@@ -69,9 +70,9 @@ func registerAgentCmd(api *agent.APIClient, name, dockerHost, jwt string) tea.Cm
 	return func() tea.Msg {
 		machineID := agent.GenerateMachineID()
 
-		agentToken, err := api.RegisterAgent(jwt, name, machineID)
+		agentID, agentToken, err := api.RegisterAgent(jwt, name, machineID)
 
-		return AgentCreateResultMsg{agentToken: agentToken, agentName: name, machineID: machineID, dockerHost: dockerHost, err: err}
+		return AgentCreateResultMsg{agentID: agentID, agentToken: agentToken, agentName: name, machineID: machineID, dockerHost: dockerHost, err: err}
 	}
 }
 
@@ -121,6 +122,7 @@ func (m AgentCreateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.err = fmt.Errorf("failed to load config: %w", err)
 					return m, nil
 				}
+				config.AgentID = selected.ID
 				config.AgentToken = selected.Token
 				config.MachineID = selected.MachineID
 				config.AgentName = selected.Name
@@ -200,6 +202,7 @@ func (m AgentCreateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.err = fmt.Errorf("failed to load config: %w", err)
 			return m, nil
 		}
+		config.AgentID = msg.agentID
 		config.AgentToken = msg.agentToken
 		config.AgentName = msg.agentName
 		config.MachineID = msg.machineID

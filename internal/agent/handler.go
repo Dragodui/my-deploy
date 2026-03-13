@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net/netip"
 	"strconv"
 
@@ -78,6 +80,16 @@ func (h *Handler) handleCreate(ctx context.Context, cmd Command) Result {
 		Binds:         binds,
 		RestartPolicy: container.RestartPolicy{Name: "always"},
 	}
+
+	// pull image
+	log.Printf("pulling image %s...", p.Image)
+	pullReader, err := h.docker.ImagePull(ctx, p.Image, client.ImagePullOptions{})
+	if err != nil {
+		return Result{Type: "result", ID: cmd.ID, Success: false, Error: "failed to pull image: " + err.Error()}
+	}
+	io.Copy(io.Discard, pullReader)
+	pullReader.Close()
+	log.Printf("image %s pulled", p.Image)
 
 	res, err := h.docker.ContainerCreate(ctx, client.ContainerCreateOptions{
 		Name:       p.Name,

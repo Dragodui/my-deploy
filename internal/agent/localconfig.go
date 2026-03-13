@@ -11,12 +11,13 @@ const DefaultServerURL = "http://localhost:8080"
 type LocalConfig struct {
 	UserName   string `json:"user_name"`
 	AgentName  string `json:"agent_name"`
+	AgentID    string `json:"agent_id"`
 	URL        string `json:"url"`
 	AgentToken string `json:"agent_token"`
 	JWT        string `json:"jwt"`
 	MachineID  string `json:"machine_id"`
 	DockerHost string `json:"docker_host"`
-	AgentMode string `json:"agent_mode"`
+	AgentMode  string `json:"agent_mode"`
 }
 
 func Load() (*LocalConfig, error) {

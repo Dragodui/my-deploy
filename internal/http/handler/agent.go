@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/dragodui/my-deploy/internal/http/middleware"
@@ -50,6 +51,7 @@ func (h *AgentHandler) RegisterOrGet(w http.ResponseWriter, r *http.Request) {
 
 	agent, err := h.svc.RegisterOrGet(r.Context(), userID, req.Name, req.MachineID)
 	if err != nil {
+		log.Printf("[ERROR] agent.RegisterOrGet: %v", err)
 		http.Error(w, "failed to register agent", http.StatusInternalServerError)
 		return
 	}
@@ -75,6 +77,7 @@ func (h *AgentHandler) ListByUser(w http.ResponseWriter, r *http.Request) {
 
 	agents, err := h.svc.ListByUser(r.Context(), userID)
 	if err != nil {
+		log.Printf("[ERROR] agent.ListByUser: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}

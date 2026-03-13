@@ -107,7 +107,7 @@ func (api *APIClient) SignUp(email, name, password string) (string, string, erro
 	return result.Token, result.Name, nil
 }
 
-func (api *APIClient) RegisterAgent(jwt, name, machineID string) (string, error) {
+func (api *APIClient) RegisterAgent(jwt, name, machineID string) (string, string, error) {
 	body, _ := json.Marshal(map[string]string{
 		"name":       name,
 		"machine_id": machineID,
@@ -115,32 +115,33 @@ func (api *APIClient) RegisterAgent(jwt, name, machineID string) (string, error)
 
 	req, err := http.NewRequest("POST", api.ServerURL+"/api/agent", bytes.NewReader(body))
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+jwt)
 
 	resp, err := api.HTTPClient.Do(req)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("register agent failed: %s — %s", resp.Status, strings.TrimSpace(string(respBody)))
+		return "", "", fmt.Errorf("register agent failed: %s — %s", resp.Status, strings.TrimSpace(string(respBody)))
 	}
 
 	var result struct {
 		Agent struct {
+			ID    string `json:"id"`
 			Token string `json:"token"`
 		} `json:"agent"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	return result.Agent.Token, nil
+	return result.Agent.ID, result.Agent.Token, nil
 }
 
 type MeResponse struct {
@@ -203,4 +204,98 @@ func (api *APIClient) ListAgents(jwt string) ([]models.Agent, error) {
 	}
 
 	return result.Agents, nil
+}
+
+func (api *APIClient) ListTemplates(jwt string) ([]models.AppTemplate, error) {
+	req, err := http.NewRequest("GET", api.ServerURL+"/api/templates", nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+jwt)
+
+	resp, err := api.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("list templates failed: %s — %s", resp.Status, strings.TrimSpace(string(respBody)))
+	}
+
+	var result struct {
+		Templates []models.AppTemplate
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	return result.Templates, nil
+}
+
+func (api *APIClient) CreateDeployment(jwt, agentID string, deploymentReq models.DeployRequest) (*models.Deployment, error) {
+	type body struct {
+		AgentID string `json:"agent_id"`
+		models.DeployRequest
+	}
+
+	data, err := json.Marshal(body{AgentID: agentID, DeployRequest: deploymentReq})
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", api.ServerURL+"/api/deployments", bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+jwt)
+
+	resp, err := api.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("create deployment failed: %s — %s", resp.Status, strings.TrimSpace(string(respBody)))
+	}
+
+	var result struct {
+		Deployment models.Deployment `json:"deployment"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	return &result.Deployment, nil
+}
+
+func (api *APIClient) ListDeployments(jwt, agentID string) ([]models.Deployment, error) {
+	req, err := http.NewRequest("GET", api.ServerURL+"/api/deployments?agent_id="+agentID, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+jwt)
+
+	resp, err := api.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("list deployments failed: %s — %s", resp.Status, strings.TrimSpace(string(respBody)))
+	}
+
+	var result []models.Deployment
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }

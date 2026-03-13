@@ -50,7 +50,7 @@ func (ac *AgentConn) SendCommand(ctx context.Context, cmd agent.Command) (agent.
 		return agent.Result{}, fmt.Errorf("failed to send command: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
 	select {
