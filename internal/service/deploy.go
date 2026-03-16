@@ -155,6 +155,7 @@ func (svc *DeployService) Create(ctx context.Context, agentID string, req models
 	}
 
 	deploy := &models.Deployment{
+		AgentID:     agentID,
 		Name:        req.Name,
 		AppID:       req.AppID,
 		Image:       payload.Image,
@@ -164,7 +165,14 @@ func (svc *DeployService) Create(ctx context.Context, agentID string, req models
 		Status:      "running",
 	}
 
-	return svc.repo.Create(ctx, deploy)
+	saved, err := svc.repo.Create(ctx, deploy)
+
+	if err != nil {
+		svc.rollbackContainer(ctx, ac, result.ContainerID)
+		return nil, fmt.Errorf("failed to save deployment: %w", err)
+	}
+	return saved, nil
+
 }
 
 func (svc *DeployService) GetByID(ctx context.Context, id string) (*models.Deployment, error) {
@@ -185,4 +193,23 @@ func (svc *DeployService) UpdateContainerID(ctx context.Context, id, containerID
 
 func (svc *DeployService) Delete(ctx context.Context, id string) error {
 	return svc.repo.Delete(ctx, id)
+}
+
+func (svc *DeployService) rollbackContainer(ctx context.Context, ac *registry.AgentConn, containerID string) error {
+
+	if _, err := ac.SendCommand(ctx, agent.Command{
+		Type:    "stop",
+		ID:      uuid.New().String(),
+		Payload: []byte(fmt.Sprintf(`{"container_id":"%s"}`, containerID)),
+	}); err != nil {
+		return nil
+	}
+
+	_, err := ac.SendCommand(ctx, agent.Command{
+		Type:    "remove",
+		ID:      uuid.New().String(),
+		Payload: []byte(fmt.Sprintf(`{"container_id":"%s"}`, containerID)),
+	})
+
+	return err
 }
