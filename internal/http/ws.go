@@ -77,6 +77,15 @@ func (h *WSHandler) HandleAgentWS(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			ac.HandleResult(result)
+
+		case "progress":
+			var prog agent.Progress
+			if err := json.Unmarshal(msg, &prog); err != nil {
+				log.Printf("invalid progress: %v", err)
+				continue
+			}
+			ac.HandleProgress(prog)
 		}
+
 	}
 }

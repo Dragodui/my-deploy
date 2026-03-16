@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -48,6 +49,8 @@ func (a *Agent) Run(ctx context.Context) {
 }
 
 func (a *Agent) connect(ctx context.Context) error {
+	var mu sync.Mutex
+
 	header := make(map[string][]string)
 	header["X-Agent-Token"] = []string{a.token}
 
@@ -56,11 +59,17 @@ func (a *Agent) connect(ctx context.Context) error {
 		return err
 	}
 	defer conn.Close()
+	notify := func(p Progress) {
+		data, _ := json.Marshal(p)
+		mu.Lock()
+		conn.WriteMessage(websocket.TextMessage, data)
+		mu.Unlock()
+	}
 
 	log.Println("connected to server")
 
 	// ping loop
-	go a.pingLoop(ctx, conn)
+	go a.pingLoop(ctx, conn, &mu)
 
 	// read messages in a goroutine so we can select on ctx.Done
 	type readResult struct {
@@ -82,8 +91,11 @@ func (a *Agent) connect(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
+			mu.Lock()
 			conn.WriteMessage(websocket.CloseMessage,
 				websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+			mu.Unlock()
+			
 			return ctx.Err()
 		case r := <-msgCh:
 			if r.err != nil {
@@ -101,9 +113,13 @@ func (a *Agent) connect(ctx context.Context) error {
 			}
 
 			go func(cmd Command) {
-				result := a.handler.Handle(ctx, cmd)
+				result := a.handler.Handle(ctx, cmd, notify)
 				data, _ := json.Marshal(result)
-				if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
+				mu.Lock()
+				err := conn.WriteMessage(websocket.TextMessage, data)
+				mu.Unlock()
+
+				if err != nil {
 					log.Printf("failed to send result: %v", err)
 				}
 			}(cmd)
@@ -111,7 +127,7 @@ func (a *Agent) connect(ctx context.Context) error {
 	}
 }
 
-func (a *Agent) pingLoop(ctx context.Context, conn *websocket.Conn) {
+func (a *Agent) pingLoop(ctx context.Context, conn *websocket.Conn, mu *sync.Mutex) {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
@@ -122,7 +138,11 @@ func (a *Agent) pingLoop(ctx context.Context, conn *websocket.Conn) {
 		case <-ticker.C:
 			ping := map[string]string{"type": "ping"}
 			data, _ := json.Marshal(ping)
-			if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
+			mu.Lock()
+			err := conn.WriteMessage(websocket.TextMessage, data)
+			mu.Unlock()
+
+			if err != nil {
 				return
 			}
 		}

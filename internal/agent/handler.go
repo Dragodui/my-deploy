@@ -18,14 +18,16 @@ type Handler struct {
 	docker *client.Client
 }
 
+type ProgressFunc func(Progress)
+
 func NewHandler(docker *client.Client) *Handler {
 	return &Handler{docker: docker}
 }
 
-func (h *Handler) Handle(ctx context.Context, cmd Command) Result {
+func (h *Handler) Handle(ctx context.Context, cmd Command, progressFunc ProgressFunc) Result {
 	switch cmd.Type {
 	case "create":
-		return h.handleCreate(ctx, cmd)
+		return h.handleCreate(ctx, cmd, progressFunc)
 	case "start":
 		return h.handleStart(ctx, cmd)
 	case "stop":
@@ -37,7 +39,7 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) Result {
 	}
 }
 
-func (h *Handler) handleCreate(ctx context.Context, cmd Command) Result {
+func (h *Handler) handleCreate(ctx context.Context, cmd Command, notify ProgressFunc) Result {
 	var p CreatePayload
 	if err := json.Unmarshal(cmd.Payload, &p); err != nil {
 		return Result{Type: "result", ID: cmd.ID, Success: false, Error: "invalid payload: " + err.Error()}
@@ -83,6 +85,11 @@ func (h *Handler) handleCreate(ctx context.Context, cmd Command) Result {
 
 	// pull image
 	log.Printf("pulling image %s...", p.Image)
+	notify(Progress{
+		Type:    "progress",
+		ID:      cmd.ID,
+		Message: fmt.Sprintf("pulling image %s...", p.Image),
+	})
 	pullReader, err := h.docker.ImagePull(ctx, p.Image, client.ImagePullOptions{})
 	if err != nil {
 		return Result{Type: "result", ID: cmd.ID, Success: false, Error: "failed to pull image: " + err.Error()}
@@ -91,6 +98,7 @@ func (h *Handler) handleCreate(ctx context.Context, cmd Command) Result {
 	pullReader.Close()
 	log.Printf("image %s pulled", p.Image)
 
+	notify(Progress{Type: "progress", ID: cmd.ID, Message: "Creating container..."})
 	res, err := h.docker.ContainerCreate(ctx, client.ContainerCreateOptions{
 		Name:       p.Name,
 		Config:     config,
@@ -101,6 +109,7 @@ func (h *Handler) handleCreate(ctx context.Context, cmd Command) Result {
 	}
 
 	// auto-start after create
+	notify(Progress{Type: "progress", ID: cmd.ID, Message: "Starting container..."})
 	if _, err := h.docker.ContainerStart(ctx, res.ID, client.ContainerStartOptions{}); err != nil {
 		return Result{Type: "result", ID: cmd.ID, Success: false, ContainerID: res.ID, Error: "created but failed to start: " + err.Error()}
 	}

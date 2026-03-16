@@ -81,5 +81,6 @@ type Deployment struct {
 	AgentID string          `json:"agent_id" db:"agent_id"`
 
 	Status    string    `json:"status" db:"status"`
+	Progress  string    `json:"progress,omitempty" db:"-"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }

@@ -38,3 +38,9 @@ type VolumeBinding struct {
 	HostPath      string `json:"host_path"`
 	ContainerPath string `json:"container_path"`
 }
+
+type Progress struct {
+	Type string `json:"type"`
+	ID string `json:"id"`
+	Message string `json:"message"`
+}

@@ -12,9 +12,10 @@ import (
 )
 
 type AgentConn struct {
-	conn    *websocket.Conn
-	mu      sync.Mutex
-	pending map[string]chan agent.Result
+	conn     *websocket.Conn
+	mu       sync.Mutex
+	pending  map[string]chan agent.Result
+	progress map[string]string
 }
 
 func newAgentConn(conn *websocket.Conn) *AgentConn {
@@ -22,6 +23,18 @@ func newAgentConn(conn *websocket.Conn) *AgentConn {
 		conn:    conn,
 		pending: make(map[string]chan agent.Result),
 	}
+}
+
+func (ac *AgentConn) HandleProgress(prog agent.Progress) {
+	ac.mu.Lock()
+	ac.progress[prog.ID] = prog.Message
+	ac.mu.Unlock()
+}
+
+func (ac *AgentConn) GetProgress(cmdID string) string {
+	ac.mu.Lock()
+	defer ac.mu.Unlock()
+	return ac.progress[cmdID]
 }
 
 // SendCommand sends a command to the agent and waits for a result.
@@ -65,6 +78,7 @@ func (ac *AgentConn) SendCommand(ctx context.Context, cmd agent.Command) (agent.
 func (ac *AgentConn) HandleResult(result agent.Result) {
 	ac.mu.Lock()
 	ch, ok := ac.pending[result.ID]
+	delete(ac.progress, result.ID)
 	ac.mu.Unlock()
 
 	if ok {
