@@ -270,3 +270,32 @@ func (svc *DeployService) rollbackContainer(ctx context.Context, ac *registry.Ag
 
 	return err
 }
+
+func (svc *DeployService) Start(ctx context.Context, containerID, agentID string) error {
+	ac, ok := svc.registry.Get(agentID)
+	if !ok {
+		return fmt.Errorf("no agent found")
+	}
+
+	_, err := ac.SendCommand(ctx, agent.Command{
+		Type:    "start",
+		ID:      uuid.New().String(),
+		Payload: []byte(fmt.Sprintf(`{"container_id":"%s"}`, containerID)),
+	})
+
+	return err
+}
+
+func (svc *DeployService) Stop(ctx context.Context, containerID, agentID string) error {
+	ac, ok := svc.registry.Get(agentID)
+	if !ok {
+		return fmt.Errorf("no agent found")
+	}
+	_, err := ac.SendCommand(ctx, agent.Command{
+		Type:    "stop",
+		ID:      uuid.New().String(),
+		Payload: []byte(fmt.Sprintf(`{"container_id":"%s"}`, containerID)),
+	})
+
+	return err
+}

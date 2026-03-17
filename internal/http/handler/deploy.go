@@ -19,6 +19,8 @@ type DeployServicer interface {
 	Delete(ctx context.Context, id string) error
 	GetProgress(deployID string) string
 	InspectDeployment(ctx context.Context, id string) (string, error)
+	Stop(ctx context.Context, containerID, agentID string) error
+	Start(ctx context.Context, containerID, agentID string) error
 }
 
 type AgentOwnerChecker interface {
@@ -70,7 +72,6 @@ func (h *DeployHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	deploy, err := h.svc.Create(r.Context(), req.AgentID, req.DeployRequest)
 	if err != nil {
-		log.Printf("[ERROR] deploy.Create: %v", err)
 		http.Error(w, "failed to create deployment", http.StatusInternalServerError)
 		return
 	}
@@ -160,10 +161,102 @@ func (h *DeployHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.svc.Delete(r.Context(), id); err != nil {
-		log.Printf("[ERROR] deploy.Delete: %v", err)
 		http.Error(w, "failed to delete deployment", http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *DeployHandler) Stop(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "id is required", http.StatusBadRequest)
+		return
+	}
+
+	deploy, err := h.svc.GetByID(r.Context(), id)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	if deploy.AgentID == "" {
+		http.Error(w, "no agent for this deploy found", http.StatusBadRequest)
+		return
+	}
+
+	if deploy.ContainerID == nil || *deploy.ContainerID == "" {
+		http.Error(w, "no container for this deploy found", http.StatusBadRequest)
+		return
+	}
+
+	ag, err := h.agentSvc.GetByID(r.Context(), deploy.AgentID)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if ag == nil || ag.UserID != userID {
+		http.Error(w, "agent not found", http.StatusForbidden)
+		return
+	}
+
+	if err := h.svc.Stop(r.Context(), *deploy.ContainerID, deploy.AgentID); err != nil {
+		http.Error(w, "failed to stop deployment", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+func (h *DeployHandler) Start(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "id is required", http.StatusBadRequest)
+		return
+	}
+
+	deploy, err := h.svc.GetByID(r.Context(), id)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	if deploy.AgentID == "" {
+		http.Error(w, "no agent for this deploy found", http.StatusBadRequest)
+		return
+	}
+
+	if deploy.ContainerID == nil || *deploy.ContainerID == "" {
+		http.Error(w, "no container for this deploy found", http.StatusBadRequest)
+		return
+	}
+
+	ag, err := h.agentSvc.GetByID(r.Context(), deploy.AgentID)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if ag == nil || ag.UserID != userID {
+		http.Error(w, "agent not found", http.StatusForbidden)
+		return
+	}
+
+	if err := h.svc.Start(r.Context(), *deploy.ContainerID, deploy.AgentID); err != nil {
+		http.Error(w, "failed to start deployment", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }

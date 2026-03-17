@@ -326,3 +326,57 @@ func (api *APIClient) ListDeployments(jwt, agentID string) ([]models.Deployment,
 
 	return result, nil
 }
+
+func (api *APIClient) StopDeployment(jwt, deployID string) error {
+	return api.manageDeployment(jwt, deployID, "stop")
+}
+
+func (api *APIClient) StartDeployment(jwt, deployID string) error {
+	return api.manageDeployment(jwt, deployID, "start")
+}
+
+func (api *APIClient) DeleteDeployment(jwt, deployID string) error {
+	req, err := http.NewRequest("DELETE", api.ServerURL+"/api/deployments/"+deployID, nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+jwt)
+	resp, err := api.HTTPClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("delete deployment failed: %s — %s", resp.Status, strings.TrimSpace(string(respBody)))
+	}
+
+	return nil
+}
+
+func (api *APIClient) manageDeployment(jwt, deployID, action string) error {
+	if action != "start" && action != "stop" {
+		return fmt.Errorf("action is not correct, only start and stop allowed")
+	}
+
+	req, err := http.NewRequest("POST", api.ServerURL+"/api/deployments/"+deployID+"/"+action, nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+jwt)
+
+	resp, err := api.HTTPClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("%s deployment failed: %s — %s", action, resp.Status, strings.TrimSpace(string(respBody)))
+	}
+	return nil
+}

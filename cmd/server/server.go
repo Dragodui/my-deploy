@@ -76,6 +76,8 @@ func NewServer(cfg *config.Config) *http.ServeMux {
 	mux.Handle("GET /api/deployments", jwtAuth(http.HandlerFunc(deployHandler.ListByAgent)))
 	mux.Handle("GET /api/deployments/{id}", jwtAuth(http.HandlerFunc(deployHandler.GetByID)))
 	mux.Handle("DELETE /api/deployments/{id}", jwtAuth(http.HandlerFunc(deployHandler.Delete)))
+	mux.Handle("POST /api/deployments/{id}/stop", jwtAuth(http.HandlerFunc(deployHandler.Stop)))
+	mux.Handle("POST /api/deployments/{id}/start", jwtAuth(http.HandlerFunc(deployHandler.Start)))
 
 	// templates
 	mux.Handle("GET /api/templates", jwtAuth(http.HandlerFunc(templatesHandler.GetAll)))
