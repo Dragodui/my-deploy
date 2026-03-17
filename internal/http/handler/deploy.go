@@ -17,6 +17,7 @@ type DeployServicer interface {
 	UpdateStatus(ctx context.Context, id, status string) error
 	UpdateContainerID(ctx context.Context, id, containerID string) error
 	Delete(ctx context.Context, id string) error
+	GetProgress(deployID string) string
 }
 
 type AgentOwnerChecker interface {
@@ -77,6 +78,8 @@ func (h *DeployHandler) Create(w http.ResponseWriter, r *http.Request) {
 	type response struct {
 		Deployment models.Deployment `json:"deployment"`
 	}
+
+	w.WriteHeader(http.StatusAccepted)
 	json.NewEncoder(w).Encode(response{
 		Deployment: *deploy,
 	})
@@ -104,6 +107,10 @@ func (h *DeployHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	if deploy == nil {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
+	}
+
+	if deploy.Status == "deploying" {
+		deploy.Progress = h.svc.GetProgress(id)
 	}
 
 	w.Header().Set("Content-Type", "application/json")

@@ -259,7 +259,7 @@ func (api *APIClient) CreateDeployment(jwt, agentID string, deploymentReq models
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
 		respBody, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("create deployment failed: %s — %s", resp.Status, strings.TrimSpace(string(respBody)))
 	}
@@ -272,6 +272,33 @@ func (api *APIClient) CreateDeployment(jwt, agentID string, deploymentReq models
 	}
 
 	return &result.Deployment, nil
+}
+
+func (api *APIClient) GetDeployment(jwt, id string) (*models.Deployment, error) {
+	req, err := http.NewRequest("GET", api.ServerURL+"/api/deployments/"+id, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+jwt)
+
+	resp, err := api.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("get deployment failed: %s — %s", resp.Status, strings.TrimSpace(string(respBody)))
+	}
+
+	var result models.Deployment
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
 
 func (api *APIClient) ListDeployments(jwt, agentID string) ([]models.Deployment, error) {

@@ -20,8 +20,9 @@ type AgentConn struct {
 
 func newAgentConn(conn *websocket.Conn) *AgentConn {
 	return &AgentConn{
-		conn:    conn,
-		pending: make(map[string]chan agent.Result),
+		conn:     conn,
+		pending:  make(map[string]chan agent.Result),
+		progress: make(map[string]string),
 	}
 }
 

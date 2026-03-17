@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	"maps"
 
@@ -23,7 +24,7 @@ type DeployRepo interface {
 }
 
 type AgentRegistryProvider interface {
-	Get(token string) (*registry.AgentConn, bool)
+	Get(agentID string) (*registry.AgentConn, bool)
 }
 
 type TemplateProvider interface {
@@ -56,14 +57,19 @@ func mergeEnv(defaults, overrides map[string]string) map[string]string {
 	return merged
 }
 
+type deployTask struct {
+	cmdID   string
+	agentID string
+}
 type DeployService struct {
 	repo      DeployRepo
 	registry  AgentRegistryProvider
 	templates TemplateProvider
+	cmdMap    sync.Map
 }
 
 func NewDeployService(repo DeployRepo, reg AgentRegistryProvider, templates TemplateProvider) *DeployService {
-	return &DeployService{repo, reg, templates}
+	return &DeployService{repo: repo, registry: reg, templates: templates}
 }
 
 // Create sends a deploy command to the connected agent.
@@ -72,7 +78,6 @@ func (svc *DeployService) Create(ctx context.Context, agentID string, req models
 	if !ok {
 		return nil, fmt.Errorf("agent not connected")
 	}
-
 	var tpl *models.AppTemplate
 	if req.AppID != nil {
 		var found bool
@@ -136,43 +141,67 @@ func (svc *DeployService) Create(ctx context.Context, agentID string, req models
 		return nil, err
 	}
 
-	result, err := ac.SendCommand(ctx, agent.Command{
-		Type:    "create",
-		ID:      uuid.New().String(),
-		Payload: payloadJSON,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("agent communication error: %w", err)
-	}
-	if !result.Success {
-		return nil, fmt.Errorf("agent error: %s", result.Error)
-	}
-
-	// save to db
 	var ports []models.PortBinding
 	for _, p := range payload.Ports {
 		ports = append(ports, models.PortBinding{HostPort: p.HostPort, ContainerPort: p.ContainerPort})
 	}
 
+	// create cmd task
+	cmdID := uuid.New().String()
 	deploy := &models.Deployment{
 		AgentID:     agentID,
 		Name:        req.Name,
 		AppID:       req.AppID,
 		Image:       payload.Image,
-		ContainerID: &result.ContainerID,
+		ContainerID: nil,
 		Ports:       ports,
 		Env:         mapToEnv(payload.Env, nil),
-		Status:      "running",
+		Status:      "deploying",
 	}
 
 	saved, err := svc.repo.Create(ctx, deploy)
-
 	if err != nil {
-		svc.rollbackContainer(ctx, ac, result.ContainerID)
-		return nil, fmt.Errorf("failed to save deployment: %w", err)
+		return nil, fmt.Errorf("failed to create deployment: %w", err)
 	}
-	return saved, nil
 
+	svc.cmdMap.Store(saved.ID, deployTask{
+		cmdID, agentID,
+	})
+
+	go func() {
+		localCtx := context.Background()
+		defer svc.cmdMap.Delete(saved.ID)
+		result, err := ac.SendCommand(localCtx, agent.Command{
+			Type:    "create",
+			ID:      cmdID,
+			Payload: payloadJSON,
+		})
+		if err != nil || !result.Success {
+			svc.UpdateStatus(localCtx, saved.ID, "error")
+			return //nil, fmt.Errorf("agent communication error: %w", err)
+		}
+
+		svc.UpdateContainerID(localCtx, saved.ID, result.ContainerID)
+		svc.UpdateStatus(localCtx, saved.ID, "running")
+		return
+
+	}()
+
+	return saved, nil
+}
+
+func (svc *DeployService) GetProgress(deployID string) string {
+	deploy, ok := svc.cmdMap.Load(deployID)
+	if !ok {
+		return "error"
+	}
+	task := deploy.(deployTask)
+	conn, ok := svc.registry.Get(task.agentID)
+	if !ok {
+		return "error"
+	}
+
+	return conn.GetProgress(task.cmdID)
 }
 
 func (svc *DeployService) GetByID(ctx context.Context, id string) (*models.Deployment, error) {

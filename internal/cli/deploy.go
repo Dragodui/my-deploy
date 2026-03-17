@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -15,6 +16,14 @@ import (
 type TemplatesListMsg struct {
 	templates []models.AppTemplate
 	err       error
+}
+
+type PollResultMsg struct {
+	deployment *models.Deployment
+	err        error
+}
+
+type pollTickMsg struct {
 }
 
 type DeployResultMsg struct {
@@ -45,6 +54,10 @@ type DeployModel struct {
 	loading bool
 	err     error
 	result  *models.Deployment
+
+	// progress
+	deployID string
+	progress string
 }
 
 func NewDeployModel(api *agent.APIClient, config *agent.LocalConfig) DeployModel {
@@ -59,6 +72,19 @@ func NewDeployModel(api *agent.APIClient, config *agent.LocalConfig) DeployModel
 		items:   []string{"From template", "Custom image"},
 		spinner: s,
 	}
+}
+
+func pollDeployCmd(api *agent.APIClient, jwt, deployID string) tea.Cmd {
+	return func() tea.Msg {
+		deploy, err := api.GetDeployment(jwt, deployID)
+		return PollResultMsg{deployment: deploy, err: err}
+	}
+}
+
+func tickCmd() tea.Cmd {
+	return tea.Tick(1500*time.Millisecond, func(t time.Time) tea.Msg {
+		return pollTickMsg{}
+	})
 }
 
 func listTemplatesCmd(api *agent.APIClient, jwt string) tea.Cmd {
@@ -164,14 +190,42 @@ func (m DeployModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.state = "form"
 			return m, nil
 		}
-		m.result = msg.deployment
-		m.state = "done"
-		return m, tea.Quit
+		m.deployID = msg.deployment.ID
+		m.state = "polling"
+		m.progress = "Starting deployment..."
+		return m, tea.Batch(m.spinner.Tick, tickCmd())
 
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
 		return m, cmd
+	case pollTickMsg:
+		if m.state == "polling" {
+			return m, pollDeployCmd(m.api, m.config.JWT, m.deployID)
+		}
+
+	case PollResultMsg:
+		if msg.err != nil {
+			m.err = msg.err
+			m.state = "form"
+			return m, nil
+		}
+
+		switch msg.deployment.Status {
+		case "running":
+			m.result = msg.deployment
+			m.state = "done"
+			return m, tea.Quit
+		case "error":
+			m.err = fmt.Errorf("deployment failed")
+			m.state = "form"
+			return m, nil
+		default:
+			if msg.deployment.Progress != "" {
+				m.progress = msg.deployment.Progress
+			}
+			return m, tickCmd()
+		}
 	}
 
 	if m.state == "form" {
@@ -450,8 +504,8 @@ func (m DeployModel) View() string {
 		b.WriteString("\n")
 		b.WriteString(Subtle.Render("tab: switch field • enter: submit • esc: back"))
 
-	case "deploying":
-		b.WriteString(m.spinner.View() + " Deploying...")
+	case "deploying", "polling":
+		b.WriteString(m.spinner.View() + " " + m.progress)
 	}
 
 	return Container.Render(b.String())
