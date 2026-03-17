@@ -190,6 +190,34 @@ func (svc *DeployService) Create(ctx context.Context, agentID string, req models
 	return saved, nil
 }
 
+func (svc *DeployService) InspectDeployment(ctx context.Context, id string) (string, error) {
+	deploy, err := svc.repo.GetByID(ctx, id)
+	if err != nil {
+		return "", err
+	}
+
+	if deploy.ContainerID == nil || *deploy.ContainerID == "" {
+		return "", fmt.Errorf("no container inside deploy found")
+	}
+
+	ac, ok := svc.registry.Get(deploy.AgentID)
+	if !ok {
+		return "", fmt.Errorf("no agent inside deploy found")
+	}
+
+	res, err := ac.SendCommand(ctx, agent.Command{
+		Type:    "inspect",
+		ID:      uuid.New().String(),
+		Payload: []byte(fmt.Sprintf(`{"container_id":"%s"}`, *deploy.ContainerID)),
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	return res.Status, nil
+}
+
 func (svc *DeployService) GetProgress(deployID string) string {
 	deploy, ok := svc.cmdMap.Load(deployID)
 	if !ok {

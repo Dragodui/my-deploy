@@ -32,10 +32,32 @@ func (h *Handler) Handle(ctx context.Context, cmd Command, progressFunc Progress
 		return h.handleStart(ctx, cmd)
 	case "stop":
 		return h.handleStop(ctx, cmd)
+	case "inspect":
+		return h.handleInspect(ctx, cmd)
 	case "remove":
 		return h.handleRemove(ctx, cmd)
 	default:
 		return Result{Type: "result", ID: cmd.ID, Success: false, Error: "unknown command: " + cmd.Type}
+	}
+}
+
+func (h *Handler) handleInspect(ctx context.Context, cmd Command) Result {
+	var p ContainerPayload
+	if err := json.Unmarshal(cmd.Payload, &p); err != nil {
+		return Result{Type: "result", ID: cmd.ID, Success: false, Error: "invalid payload: " + err.Error()}
+	}
+
+	res, err := h.docker.ContainerInspect(ctx, p.ContainerID, client.ContainerInspectOptions{})
+	if err != nil {
+		return Result{Type: "result", ID: cmd.ID, Success: false, Error: err.Error()}
+	}
+
+	return Result{
+		Type:        "result",
+		ID:          cmd.ID,
+		Success:     true,
+		ContainerID: p.ContainerID,
+		Status:      string(res.Container.State.Status),
 	}
 }
 

@@ -20,12 +20,17 @@ type ContainerPayload struct {
 	ContainerID string `json:"container_id"`
 }
 
+type InspectPayload struct {
+	ContainerID string `json:"container_id"`
+}
+
 type Result struct {
 	Type        string `json:"type"`
 	ID          string `json:"id"`
 	Success     bool   `json:"success"`
 	ContainerID string `json:"container_id,omitempty"`
 	Error       string `json:"error,omitempty"`
+	Status      string `json:"status,omitempty"`
 }
 
 // reuse from models or duplicate here
@@ -40,7 +45,7 @@ type VolumeBinding struct {
 }
 
 type Progress struct {
-	Type string `json:"type"`
-	ID string `json:"id"`
+	Type    string `json:"type"`
+	ID      string `json:"id"`
 	Message string `json:"message"`
 }

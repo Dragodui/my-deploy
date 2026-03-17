@@ -18,6 +18,7 @@ type DeployServicer interface {
 	UpdateContainerID(ctx context.Context, id, containerID string) error
 	Delete(ctx context.Context, id string) error
 	GetProgress(deployID string) string
+	InspectDeployment(ctx context.Context, id string) (string, error)
 }
 
 type AgentOwnerChecker interface {
@@ -111,6 +112,10 @@ func (h *DeployHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 	if deploy.Status == "deploying" {
 		deploy.Progress = h.svc.GetProgress(id)
+	} else if deploy.ContainerID != nil {
+		if status, err := h.svc.InspectDeployment(r.Context(), id); err == nil {
+			deploy.Status = status
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
