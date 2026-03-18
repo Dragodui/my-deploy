@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/netip"
 	"strconv"
+	"strings"
 
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/network"
@@ -107,6 +108,10 @@ func (h *Handler) handleCreate(ctx context.Context, cmd Command, notify Progress
 		PortBindings:  portBindings,
 		Binds:         binds,
 		RestartPolicy: container.RestartPolicy{Name: "always"},
+		Resources: container.Resources{
+			Memory:   parseMemory(p.Memory),
+			NanoCPUs: int64(p.CPU) * 1e9,
+		},
 	}
 
 	// pull image
@@ -201,4 +206,25 @@ func (h *Handler) handleLogs(ctx context.Context, cmd Command, logFunc LogFunc) 
 
 	logFunc(LogChunk{Type: "logs", ID: cmd.ID, Done: true})
 	return Result{Type: "result", ID: cmd.ID, Success: true}
+}
+
+func parseMemory(s string) int64 {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return 0
+	}
+	s = strings.ToUpper(s)
+	multiplier := int64(1)
+	if strings.HasSuffix(s, "G") {
+		multiplier = 1024 * 1024 * 1024
+		s = strings.TrimSuffix(s, "G")
+	} else if strings.HasSuffix(s, "M") {
+		multiplier = 1024 * 1024
+		s = strings.TrimSuffix(s, "M")
+	}
+	val, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return 0
+	}
+	return val * multiplier
 }

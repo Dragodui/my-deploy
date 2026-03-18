@@ -68,8 +68,8 @@ On first launch the CLI will guide you through:
 1. **Registration / Login** — create an account or sign in
 2. **Agent setup** — select an existing agent or create a new one (with optional Docker host)
 3. **Home screen** — main menu:
-   - **Deploy** — create a deployment from a template or custom Docker image
-   - **Deploy list** — view all deployments with live status
+   - **Deploy** — create a deployment from a template or custom Docker image, with real-time progress
+   - **Deploy list** — view all deployments with live Docker status, start/stop/delete containers, view live logs
    - **Start / Stop agent** — manage the local agent daemon
    - **Change agent** — switch to a different agent
    - **Logout**
@@ -95,7 +95,8 @@ The agent token is displayed after agent creation in the CLI. On subsequent runs
 Templates define pre-configured deployments as YAML files in `internal/templates/`. Each template specifies an image, ports, volumes, environment variables, and resource limits.
 
 Available templates:
-- **Minecraft Server** — Vanilla Minecraft Java server (`itzg/minecraft-server`)
+- **Minecraft Server** — Vanilla Minecraft Java server (`itzg/minecraft-server`) — 2G RAM, 1 CPU
+- **Nginx** — Simple web server (`nginx:alpine`)
 
 ## API Endpoints
 
@@ -112,7 +113,10 @@ Available templates:
 | GET | `/api/deployments?agent_id=` | JWT | List deployments |
 | GET | `/api/deployments/{id}` | JWT | Get deployment |
 | DELETE | `/api/deployments/{id}` | JWT | Delete deployment |
+| POST | `/api/deployments/{id}/start` | JWT | Start container |
+| POST | `/api/deployments/{id}/stop` | JWT | Stop container |
 | GET | `/ws/agent` | Agent Token | Agent WebSocket |
+| GET | `/ws/logs/{id}` | JWT | Live container logs (WebSocket) |
 
 ## Project Structure
 
@@ -125,7 +129,7 @@ cmd/
 internal/
   agent/               agent client, config, WebSocket handler, API client
   auth/                JWT generation, password hashing
-  cli/                 TUI screens (login, register, agent, home, deploy, deploy list)
+  cli/                 TUI screens (login, register, agent, home, deploy, deploy list, logs)
   config/              server config (env-based)
   daemon/              agent daemon management (start, stop, status, PID tracking)
   db/                  database connection & auto-migrations
@@ -153,27 +157,31 @@ migrations/            SQL migration files (auto-applied on startup)
 
 - [x] User registration and JWT authentication
 - [x] Agent registration and WebSocket connection
+- [x] User registration and JWT authentication
+- [x] Agent registration and WebSocket connection
 - [x] Deploy from custom Docker image (name, image, ports, env)
-- [x] Deploy from YAML app templates (Minecraft)
-- [x] Deployment list with live status
-- [x] Delete deployments
+- [x] Deploy from YAML app templates (Minecraft, Nginx)
+- [x] Resource limits (memory, CPU) from templates and user overrides
+- [x] Async deployment with real-time progress (pulling, creating, starting)
+- [x] Deployment list with live Docker status (via container inspect)
+- [x] Start / stop / delete containers from TUI
+- [x] Live container logs streaming via WebSocket (saved to `~/.mydeploy/logs/`)
 - [x] Agent daemon management (start/stop from TUI)
 - [x] Local and remote agent modes
 - [x] Interactive TUI with Bubble Tea
 - [x] Auto-migrations on server startup
 - [x] Docker Compose support
+- [x] Server error logging to file (`logs/server.log`)
 
 ### Planned
 
 - [ ] Microservice architecture (split server into auth, deploy, agent gateway services)
 - [ ] Desktop app (Electron / Tauri / Wails)
 - [ ] Web dashboard as an alternative to TUI
-- [ ] Container logs streaming in TUI
-- [ ] Restart / redeploy from CLI
+- [ ] Deployment settings editing from CLI
 - [ ] Agent health monitoring and auto-reconnect status in UI
-- [ ] More app templates (PostgreSQL, Redis, Nginx, Node.js)
+- [ ] More app templates (PostgreSQL, Redis, Node.js)
 - [ ] Environment variables management per agent
-- [ ] Deployment rollback
 - [ ] Multi-user access control (teams, roles)
 - [ ] HTTPS / TLS support for server and agent connections
 - [ ] CI/CD integration (deploy on git push)

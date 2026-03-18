@@ -136,6 +136,18 @@ func (svc *DeployService) Create(ctx context.Context, agentID string, req models
 		}
 	}
 
+	// resources
+	if tpl != nil && tpl.Resources != nil {
+		payload.Memory = tpl.Resources.Memory
+		payload.CPU = tpl.Resources.CPU
+	}
+	if req.Memory != "" {
+		payload.Memory = req.Memory
+	}
+	if req.CPU > 0 {
+		payload.CPU = req.CPU
+	}
+
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err

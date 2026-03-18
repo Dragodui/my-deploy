@@ -14,6 +14,8 @@ type CreatePayload struct {
 	Env     map[string]string `json:"env,omitempty"`
 	Ports   []PortBinding     `json:"ports,omitempty"`
 	Volumes []VolumeBinding   `json:"volumes,omitempty"`
+	Memory  string            `json:"memory,omitempty"`
+	CPU     int               `json:"cpu,omitempty"`
 }
 
 type ContainerPayload struct {
