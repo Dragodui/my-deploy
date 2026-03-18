@@ -25,6 +25,7 @@ type DeployListModel struct {
 	deployments  []models.Deployment
 	state        string // list or actions
 	selected     *models.Deployment
+	action       string
 	actions      []string
 	actionCursor int
 	cursor       int
@@ -58,6 +59,13 @@ func (m DeployListModel) Init() tea.Cmd {
 	return tea.Batch(m.spinner.Tick, listDeploymentsCmd(m.api, m.config.JWT, m.config.AgentID))
 }
 
+func (m DeployListModel) Action() string {
+	return m.action
+}
+func (m DeployListModel) SelectedDeploy() *models.Deployment {
+	return m.selected
+}
+
 func (m DeployListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -76,7 +84,7 @@ func (m DeployListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				// update available statuses
 				if status == "running" {
-					actions = []string{"Stop", "Delete", "Back"}
+					actions = []string{"Logs", "Stop", "Delete", "Back"}
 				} else if status == "exited" {
 					actions = []string{"Start", "Delete", "Back"}
 				} else {
@@ -117,6 +125,10 @@ func (m DeployListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.state = "list"
 					m.loading = true
 					return m, tea.Batch(m.spinner.Tick, listDeploymentsCmd(m.api, m.config.JWT, m.config.AgentID))
+				case "Logs":
+					m.action = "logs"
+					m.state = "list"
+					return m, tea.Quit
 				case "Back":
 					m.state = "list"
 				}

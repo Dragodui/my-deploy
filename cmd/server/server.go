@@ -8,7 +8,7 @@ import (
 
 	"github.com/dragodui/my-deploy/internal/config"
 	"github.com/dragodui/my-deploy/internal/db"
-	myhttp "github.com/dragodui/my-deploy/internal/http"
+	ws "github.com/dragodui/my-deploy/internal/http"
 	"github.com/dragodui/my-deploy/internal/http/handler"
 	"github.com/dragodui/my-deploy/internal/http/middleware"
 	"github.com/dragodui/my-deploy/internal/registry"
@@ -47,7 +47,7 @@ func NewServer(cfg *config.Config) *http.ServeMux {
 	deployRepo := repository.NewDeployRepository(database)
 	deployService := service.NewDeployService(deployRepo, agentRegistry, tplRegistry)
 	deployHandler := handler.NewDeployHandler(deployService, agentService)
-	wsHandler := myhttp.NewWSHandler(agentRegistry)
+	wsHandler := ws.NewWSHandler(agentRegistry, deployService)
 
 	// templates
 	templatesService := service.NewTemplateService(tplRegistry)
@@ -61,6 +61,7 @@ func NewServer(cfg *config.Config) *http.ServeMux {
 	jwtAuth := middleware.JWTAuth(cfg.JWTSecret)
 	agentTokenAuth := middleware.AgentAuth(agentRepo)
 	mux.Handle("GET /ws/agent", agentTokenAuth(http.HandlerFunc(wsHandler.HandleAgentWS)))
+	mux.Handle("GET /ws/logs/{id}", jwtAuth(http.HandlerFunc(wsHandler.HandleLogsWS)))
 
 	// auth
 	mux.HandleFunc("POST /api/auth/sign-up", authHandler.SignUp)

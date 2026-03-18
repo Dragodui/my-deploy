@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/dragodui/my-deploy/internal/models"
+	"github.com/gorilla/websocket"
 )
 
 func IsJWTExpired(token string) bool {
@@ -379,4 +380,20 @@ func (api *APIClient) manageDeployment(jwt, deployID, action string) error {
 		return fmt.Errorf("%s deployment failed: %s — %s", action, resp.Status, strings.TrimSpace(string(respBody)))
 	}
 	return nil
+}
+
+func (api *APIClient) ConnectLogs(jwt, deployID string) (*websocket.Conn, error) {
+	wsURL := strings.Replace(api.ServerURL, "http://", "ws://", 1)
+	wsURL = strings.Replace(wsURL, "https://", "wss://", 1)
+	wsURL = wsURL + "/ws/logs/" + deployID
+
+	header := make(http.Header)
+	header.Set("Authorization", "Bearer "+jwt)
+
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, header)
+	if err != nil {
+		return nil, fmt.Errorf("connect logs failed: %w", err)
+	}
+
+	return conn, nil
 }

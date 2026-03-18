@@ -82,9 +82,18 @@ func main() {
 			continue
 		case "deploy_list":
 			listModel := cli.NewDeployListModel(api, config)
-			if _, err := tea.NewProgram(listModel).Run(); err != nil {
+			result, err := tea.NewProgram(listModel).Run()
+			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
+			}
+			list := result.(cli.DeployListModel)
+			if list.Action() == "logs" && list.SelectedDeploy() != nil {
+				logsModel := cli.NewLogsModel(api, config, list.SelectedDeploy().ID)
+				if _, err := tea.NewProgram(logsModel).Run(); err != nil {
+					fmt.Printf("Error: %v\n", err)
+					os.Exit(1)
+				}
 			}
 			continue
 		default:

@@ -1,13 +1,16 @@
-package http
+package ws
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
 
 	"github.com/dragodui/my-deploy/internal/agent"
+	"github.com/dragodui/my-deploy/internal/http/handler"
 	"github.com/dragodui/my-deploy/internal/http/middleware"
 	"github.com/dragodui/my-deploy/internal/registry"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -16,11 +19,12 @@ var upgrader = websocket.Upgrader{
 }
 
 type WSHandler struct {
-	registry *registry.AgentRegistry
+	registry  *registry.AgentRegistry
+	deploySvc handler.DeployServicer
 }
 
-func NewWSHandler(reg *registry.AgentRegistry) *WSHandler {
-	return &WSHandler{registry: reg}
+func NewWSHandler(reg *registry.AgentRegistry, deploySvc handler.DeployServicer) *WSHandler {
+	return &WSHandler{registry: reg, deploySvc: deploySvc}
 }
 
 func (h *WSHandler) HandleAgentWS(w http.ResponseWriter, r *http.Request) {
@@ -85,7 +89,72 @@ func (h *WSHandler) HandleAgentWS(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			ac.HandleProgress(prog)
+		case "logs":
+			var chunk agent.LogChunk
+			if err := json.Unmarshal(msg, &chunk); err != nil {
+				log.Printf("invalid log chunk: %v", err)
+				continue
+			}
+			ac.HandleLogChunk(chunk)
 		}
 
+	}
+}
+
+func (h *WSHandler) HandleLogsWS(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "invalid deployment id", http.StatusBadRequest)
+		return
+	}
+
+	deploy, err := h.deploySvc.GetByID(r.Context(), id)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	if deploy.ContainerID == nil {
+		http.Error(w, "no container id found", http.StatusBadRequest)
+		return
+	}
+
+	ac, ok := h.registry.Get(deploy.AgentID)
+	if !ok {
+		http.Error(w, "no agent found", http.StatusBadRequest)
+		return
+	}
+
+	p := agent.ContainerPayload{
+		ContainerID: *deploy.ContainerID,
+	}
+
+	payload, _ := json.Marshal(p)
+	cmd := agent.Command{
+		Type:    "logs",
+		ID:      uuid.New().String(),
+		Payload: payload,
+	}
+
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("websocket upgrade failed: %v", err)
+		return
+	}
+	defer conn.Close()
+	go func() {
+		ac.SendCommand(context.Background(), cmd)
+	}()
+
+	logsChan := ac.SubscribeLogs(cmd.ID)
+	defer ac.UnsubscribeLogs(cmd.ID)
+	for chunk := range logsChan {
+		data, _ := json.Marshal(chunk)
+		if err := conn.WriteMessage(websocket.TextMessage, data); err != nil {
+			break
+		}
+		if chunk.Done {
+			break
+		}
 	}
 }

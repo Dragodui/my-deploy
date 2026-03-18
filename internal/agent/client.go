@@ -66,6 +66,13 @@ func (a *Agent) connect(ctx context.Context) error {
 		mu.Unlock()
 	}
 
+	logFunc := func(log LogChunk) {
+		data, _ := json.Marshal(log)
+		mu.Lock()
+		conn.WriteMessage(websocket.TextMessage, data)
+		mu.Unlock()
+	}
+
 	log.Println("connected to server")
 
 	// ping loop
@@ -95,7 +102,7 @@ func (a *Agent) connect(ctx context.Context) error {
 			conn.WriteMessage(websocket.CloseMessage,
 				websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 			mu.Unlock()
-			
+
 			return ctx.Err()
 		case r := <-msgCh:
 			if r.err != nil {
@@ -113,7 +120,7 @@ func (a *Agent) connect(ctx context.Context) error {
 			}
 
 			go func(cmd Command) {
-				result := a.handler.Handle(ctx, cmd, notify)
+				result := a.handler.Handle(ctx, cmd, notify, logFunc)
 				data, _ := json.Marshal(result)
 				mu.Lock()
 				err := conn.WriteMessage(websocket.TextMessage, data)

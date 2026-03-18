@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -19,12 +20,13 @@ type Handler struct {
 }
 
 type ProgressFunc func(Progress)
+type LogFunc func(LogChunk)
 
 func NewHandler(docker *client.Client) *Handler {
 	return &Handler{docker: docker}
 }
 
-func (h *Handler) Handle(ctx context.Context, cmd Command, progressFunc ProgressFunc) Result {
+func (h *Handler) Handle(ctx context.Context, cmd Command, progressFunc ProgressFunc, logFunc LogFunc) Result {
 	switch cmd.Type {
 	case "create":
 		return h.handleCreate(ctx, cmd, progressFunc)
@@ -34,6 +36,8 @@ func (h *Handler) Handle(ctx context.Context, cmd Command, progressFunc Progress
 		return h.handleStop(ctx, cmd)
 	case "inspect":
 		return h.handleInspect(ctx, cmd)
+	case "logs":
+		return h.handleLogs(ctx, cmd, logFunc)
 	case "remove":
 		return h.handleRemove(ctx, cmd)
 	default:
@@ -176,4 +180,25 @@ func (h *Handler) handleRemove(ctx context.Context, cmd Command) Result {
 	}
 
 	return Result{Type: "result", ID: cmd.ID, Success: true, ContainerID: p.ContainerID}
+}
+
+func (h *Handler) handleLogs(ctx context.Context, cmd Command, logFunc LogFunc) Result {
+	var p ContainerPayload
+	if err := json.Unmarshal(cmd.Payload, &p); err != nil {
+		return Result{Type: "result", ID: cmd.ID, Success: false, Error: "invalid payload: " + err.Error()}
+	}
+	reader, err := h.docker.ContainerLogs(ctx, p.ContainerID, client.ContainerLogsOptions{Follow: true, ShowStdout: true, ShowStderr: true, Tail: "100", Timestamps: true})
+	if err != nil {
+		return Result{Type: "result", ID: cmd.ID, Success: false, Error: "invalid payload: " + err.Error()}
+	}
+	defer reader.Close()
+
+	scanner := bufio.NewScanner(reader)
+	for scanner.Scan() {
+		line := scanner.Text()
+		logFunc(LogChunk{Type: "logs", ID: cmd.ID, Data: line})
+	}
+
+	logFunc(LogChunk{Type: "logs", ID: cmd.ID, Done: true})
+	return Result{Type: "result", ID: cmd.ID, Success: true}
 }

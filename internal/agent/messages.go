@@ -49,3 +49,11 @@ type Progress struct {
 	ID      string `json:"id"`
 	Message string `json:"message"`
 }
+
+type LogChunk struct {
+	Type  string `json:"type"`
+	ID    string `json:"id"`
+	Data  string `json:"data"`
+	Done  bool   `json:"done"`
+	Error string `json:"error,omitempty"`
+}

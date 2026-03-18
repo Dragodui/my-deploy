@@ -16,6 +16,7 @@ type AgentConn struct {
 	mu       sync.Mutex
 	pending  map[string]chan agent.Result
 	progress map[string]string
+	logSubs  map[string]chan agent.LogChunk
 }
 
 func newAgentConn(conn *websocket.Conn) *AgentConn {
@@ -23,6 +24,7 @@ func newAgentConn(conn *websocket.Conn) *AgentConn {
 		conn:     conn,
 		pending:  make(map[string]chan agent.Result),
 		progress: make(map[string]string),
+		logSubs:  make(map[string]chan agent.LogChunk),
 	}
 }
 
@@ -75,6 +77,48 @@ func (ac *AgentConn) SendCommand(ctx context.Context, cmd agent.Command) (agent.
 	}
 }
 
+func (ac *AgentConn) SubscribeLogs(cmdID string) chan agent.LogChunk {
+	// create channel for last 100 logs
+	ch := make(chan agent.LogChunk, 100)
+
+	// add it to logSubs in agent
+	ac.mu.Lock()
+	ac.logSubs[cmdID] = ch
+	ac.mu.Unlock()
+
+	return ch
+}
+
+func (ac *AgentConn) HandleLogChunk(chunk agent.LogChunk) {
+	// find the channel for chunk
+	ac.mu.Lock()
+	ch, ok := ac.logSubs[chunk.ID]
+	ac.mu.Unlock()
+
+	if !ok {
+		return
+	}
+
+	// write to this channel (unblocking)
+	select {
+	case ch <- chunk:
+	default:
+	}
+}
+
+func (ac *AgentConn) UnsubscribeLogs(cmdID string) {
+
+	// find channel and remove from logSubs
+	ac.mu.Lock()
+	ch := ac.logSubs[cmdID]
+	delete(ac.logSubs, cmdID)
+	ac.mu.Unlock()
+
+	// close channel
+	close(ch)
+	return
+}
+
 // HandleResult routes a result to the waiting sender.
 func (ac *AgentConn) HandleResult(result agent.Result) {
 	ac.mu.Lock()
@@ -123,9 +167,9 @@ func (r *AgentRegistry) Unregister(token string) {
 	r.mu.Unlock()
 }
 
-func (r *AgentRegistry) Get(token string) (*AgentConn, bool) {
+func (r *AgentRegistry) Get(agentID string) (*AgentConn, bool) {
 	r.mu.RLock()
-	ac, ok := r.agents[token]
+	ac, ok := r.agents[agentID]
 	r.mu.RUnlock()
 	return ac, ok
 }
