@@ -212,6 +212,11 @@ func (h *DeployHandler) Stop(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := h.svc.UpdateStatus(r.Context(), id, "exited"); err != nil {
+		http.Error(w, "failed to update deployment status", http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 }
 func (h *DeployHandler) Start(w http.ResponseWriter, r *http.Request) {
@@ -258,5 +263,9 @@ func (h *DeployHandler) Start(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := h.svc.UpdateStatus(r.Context(), id, "running"); err != nil {
+		http.Error(w, "failed to update deployment status", http.StatusInternalServerError)
+		return
+	}
 	w.WriteHeader(http.StatusOK)
 }

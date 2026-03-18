@@ -176,15 +176,16 @@ func (svc *DeployService) Create(ctx context.Context, agentID string, req models
 			ID:      cmdID,
 			Payload: payloadJSON,
 		})
-		if err != nil || !result.Success {
+		if err != nil {
 			svc.UpdateStatus(localCtx, saved.ID, "error")
-			return //nil, fmt.Errorf("agent communication error: %w", err)
+			return
 		}
-
+		if !result.Success {
+			svc.UpdateStatus(localCtx, saved.ID, "error")
+			return
+		}
 		svc.UpdateContainerID(localCtx, saved.ID, result.ContainerID)
 		svc.UpdateStatus(localCtx, saved.ID, "running")
-		return
-
 	}()
 
 	return saved, nil

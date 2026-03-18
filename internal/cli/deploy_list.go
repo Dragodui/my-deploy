@@ -20,13 +20,17 @@ type DeployDeleteMsg struct {
 }
 
 type DeployListModel struct {
-	api         *agent.APIClient
-	config      *agent.LocalConfig
-	deployments []models.Deployment
-	cursor      int
-	spinner     spinner.Model
-	loading     bool
-	err         error
+	api          *agent.APIClient
+	config       *agent.LocalConfig
+	deployments  []models.Deployment
+	state        string // list or actions
+	selected     *models.Deployment
+	actions      []string
+	actionCursor int
+	cursor       int
+	spinner      spinner.Model
+	loading      bool
+	err          error
 }
 
 func NewDeployListModel(api *agent.APIClient, config *agent.LocalConfig) DeployListModel {
@@ -39,6 +43,7 @@ func NewDeployListModel(api *agent.APIClient, config *agent.LocalConfig) DeployL
 		config:  config,
 		spinner: s,
 		loading: true,
+		state:   "list",
 	}
 }
 
@@ -57,15 +62,82 @@ func (m DeployListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
+		case "enter":
+			if m.loading {
+				return m, nil
+			}
+			if m.state == "list" {
+				if len(m.deployments) == 0 {
+					return m, nil
+				}
+				m.selected = &m.deployments[m.cursor]
+				actions := make([]string, 3)
+				status := m.deployments[m.cursor].Status
+
+				// update available statuses
+				if status == "running" {
+					actions = []string{"Stop", "Delete", "Back"}
+				} else if status == "exited" {
+					actions = []string{"Start", "Delete", "Back"}
+				} else {
+					actions = []string{"Delete", "Back"}
+				}
+				m.actions = actions
+
+				// reset cursor
+				m.state = "actions"
+				m.actionCursor = 0
+			} else {
+				selected := m.actions[m.actionCursor]
+				switch selected {
+				case "Start":
+					err := m.api.StartDeployment(m.config.JWT, m.selected.ID)
+					if err != nil {
+						m.err = err
+						return m, nil
+					}
+					m.state = "list"
+					m.loading = true
+					return m, tea.Batch(m.spinner.Tick, listDeploymentsCmd(m.api, m.config.JWT, m.config.AgentID))
+				case "Stop":
+					err := m.api.StopDeployment(m.config.JWT, m.selected.ID)
+					if err != nil {
+						m.err = err
+						return m, nil
+					}
+					m.state = "list"
+					m.loading = true
+					return m, tea.Batch(m.spinner.Tick, listDeploymentsCmd(m.api, m.config.JWT, m.config.AgentID))
+				case "Delete":
+					err := m.api.DeleteDeployment(m.config.JWT, m.selected.ID)
+					if err != nil {
+						m.err = err
+						return m, nil
+					}
+					m.state = "list"
+					m.loading = true
+					return m, tea.Batch(m.spinner.Tick, listDeploymentsCmd(m.api, m.config.JWT, m.config.AgentID))
+				case "Back":
+					m.state = "list"
+				}
+			}
 		case "ctrl+c", "esc", "q":
-			return m, tea.Quit
+			if m.state == "actions" {
+				m.state = "list"
+			} else {
+				return m, tea.Quit
+			}
 		case "up":
-			if m.cursor > 0 {
+			if m.state == "list" && m.cursor > 0 {
 				m.cursor--
+			} else if m.state == "actions" && m.actionCursor > 0 {
+				m.actionCursor--
 			}
 		case "down":
-			if m.cursor < len(m.deployments)-1 {
+			if m.state == "list" && m.cursor < len(m.deployments)-1 {
 				m.cursor++
+			} else if m.state == "actions" && m.actionCursor < len(m.actions)-1 {
+				m.actionCursor++
 			}
 		}
 
@@ -109,6 +181,22 @@ func (m DeployListModel) View() string {
 		b.WriteString(Subtle.Render("No deployments yet."))
 		b.WriteString("\n\n")
 		b.WriteString(Subtle.Render("esc: back"))
+		return Container.Render(b.String())
+	}
+
+	if m.state == "actions" && m.selected != nil {
+		b.WriteString(Title.Render(m.selected.Name))
+		b.WriteString("\n")
+		for i, action := range m.actions {
+			if i == m.actionCursor {
+				b.WriteString(FocusedInput.Render("> " + action))
+			} else {
+				b.WriteString("  " + action)
+			}
+			b.WriteString("\n")
+		}
+		b.WriteString("\n")
+		b.WriteString(Subtle.Render("↑/↓: navigate • enter: select • esc: back"))
 		return Container.Render(b.String())
 	}
 
