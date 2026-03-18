@@ -250,6 +250,18 @@ func (svc *DeployService) UpdateContainerID(ctx context.Context, id, containerID
 }
 
 func (svc *DeployService) Delete(ctx context.Context, id string) error {
+	deploy, err := svc.repo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if deploy.ContainerID != nil && *deploy.ContainerID != "" {
+		ac, ok := svc.registry.Get(deploy.AgentID)
+		if ok {
+			svc.rollbackContainer(ctx, ac, *deploy.ContainerID)
+		}
+	}
+
 	return svc.repo.Delete(ctx, id)
 }
 
