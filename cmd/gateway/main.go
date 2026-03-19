@@ -63,7 +63,7 @@ func main() {
 	mux.Handle("GET /api/agents", jwtToUserID(cfg.JWTSecret, agentProxy))
 
 	// agent websocket — без JWT (agent token auth внутри agent service)
-	mux.Handle("GET /ws/agent", agentProxy)
+	mux.Handle("GET /ws/agent", gateway.WSProxy(cfg.AgentURL))
 
 	log.Printf("gateway starting on port %d", cfg.Port)
 	http.ListenAndServe(":"+strconv.Itoa(cfg.Port), mux)
