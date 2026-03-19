@@ -1,6 +1,6 @@
 CREATE TABLE agents (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id     UUID NOT NULL REFERENCES users(id),
+    user_id     UUID NOT NULL,
     token       TEXT UNIQUE NOT NULL,  
     name        TEXT NOT NULL,        
     machine_id  TEXT NOT NULL,       

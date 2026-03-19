@@ -1,28 +1,70 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"net/http/httputil"
 	"strconv"
+	"strings"
 
 	"github.com/dragodui/my-deploy/internal/gateway"
-	"github.com/dragodui/my-deploy/internal/shared/http/middleware"
+	"github.com/dragodui/my-deploy/internal/shared/auth"
 )
 
 func healthCheck(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
 
+// jwtToUserID validates JWT and sets X-User-ID header for downstream services
+func jwtToUserID(jwtSecret string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		header := r.Header.Get("Authorization")
+		if header == "" {
+			http.Error(w, "missing authorization header", http.StatusUnauthorized)
+			return
+		}
+
+		parts := strings.SplitN(header, " ", 2)
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			http.Error(w, "invalid authorization header", http.StatusUnauthorized)
+			return
+		}
+
+		userID, err := auth.ValidateToken(parts[1], jwtSecret)
+		if err != nil {
+			http.Error(w, "invalid token", http.StatusUnauthorized)
+			return
+		}
+
+		r.Header.Set("X-User-ID", userID)
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	cfg := gateway.LoadConfig()
 
 	authProxy := httputil.NewSingleHostReverseProxy(cfg.AuthURL)
+	agentProxy := httputil.NewSingleHostReverseProxy(cfg.AgentURL)
+
 	mux := http.NewServeMux()
 
-	// без JWT
-	mux.Handle("/api/auth/", authProxy)
-	mux.HandleFunc("/health", healthCheck)
-	mux.Handle("/api/me", middleware.JWTAuth(cfg.JWTSecret)(authProxy))
+	// health
+	mux.HandleFunc("GET /health", healthCheck)
 
+	// auth — без JWT
+	mux.Handle("/api/auth/", authProxy)
+
+	// auth — с JWT
+	mux.Handle("GET /api/me", jwtToUserID(cfg.JWTSecret, authProxy))
+
+	// agent — с JWT
+	mux.Handle("POST /api/agent", jwtToUserID(cfg.JWTSecret, agentProxy))
+	mux.Handle("GET /api/agents", jwtToUserID(cfg.JWTSecret, agentProxy))
+
+	// agent websocket — без JWT (agent token auth внутри agent service)
+	mux.Handle("GET /ws/agent", agentProxy)
+
+	log.Printf("gateway starting on port %d", cfg.Port)
 	http.ListenAndServe(":"+strconv.Itoa(cfg.Port), mux)
 }

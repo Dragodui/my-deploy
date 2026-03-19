@@ -11,7 +11,7 @@ type Config struct {
 	Port      int
 	JWTSecret string
 	AuthURL   *url.URL
-	// AgentURL    *url.URL
+	AgentURL    *url.URL
 	// DeployURL   *url.URL
 	// TemplateURL *url.URL
 }
@@ -32,10 +32,10 @@ func LoadConfig() *Config {
 		log.Fatal("AUTH_SERVICE_URL is required")
 	}
 
-	// agentURL, err := url.Parse(os.Getenv("AGENT_SERVICE_URL"))
-	// if err != nil || agentURL.Host == "" {
-	// 	log.Fatal("AGENT_SERVICE_URL is required")
-	// }
+	agentURL, err := url.Parse(os.Getenv("AGENT_SERVICE_URL"))
+	if err != nil || agentURL.Host == "" {
+		log.Fatal("AGENT_SERVICE_URL is required")
+	}
 
 	// deployURL, err := url.Parse(os.Getenv("DEPLOY_SERVICE_URL"))
 	// if err != nil || deployURL.Host == "" {
@@ -51,7 +51,7 @@ func LoadConfig() *Config {
 		Port:      port,
 		JWTSecret: jwtSecret,
 		AuthURL:   authURL,
-		// AgentURL:    agentURL,
+		AgentURL:    agentURL,
 		// DeployURL:   deployURL,
 		// TemplateURL: templateURL,
 	}
