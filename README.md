@@ -185,6 +185,7 @@ migrations/            SQL migration files (auto-applied on startup)
 - [ ] Multi-user access control (teams, roles)
 - [ ] HTTPS / TLS support for server and agent connections
 - [ ] CI/CD integration (deploy on git push)
+- [ ] Prometheus metrics + Grafana dashboards (per-service /metrics endpoint, request rate, latency, error rate)
 - [ ] Resource usage monitoring (CPU, memory, disk)
 - [ ] Container volume management in CLI
 - [ ] Notifications (Telegram, Discord, webhooks)
