@@ -52,17 +52,15 @@ func main() {
 	// health
 	mux.HandleFunc("GET /health", healthCheck)
 
-	// auth — без JWT
+	// auth routes
 	mux.Handle("/api/auth/", authProxy)
-
-	// auth — с JWT
 	mux.Handle("GET /api/me", jwtToUserID(cfg.JWTSecret, authProxy))
 
-	// agent — с JWT
+	// agent router
 	mux.Handle("POST /api/agent", jwtToUserID(cfg.JWTSecret, agentProxy))
 	mux.Handle("GET /api/agents", jwtToUserID(cfg.JWTSecret, agentProxy))
 
-	// agent websocket — без JWT (agent token auth внутри agent service)
+	// agent websocket with proxy
 	mux.Handle("GET /ws/agent", gateway.WSProxy(cfg.AgentURL))
 
 	log.Printf("gateway starting on port %d", cfg.Port)
