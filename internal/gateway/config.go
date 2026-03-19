@@ -11,7 +11,7 @@ type Config struct {
 	Port      int
 	JWTSecret string
 	AuthURL   *url.URL
-	AgentURL    *url.URL
+	AgentURL  *url.URL
 	// DeployURL   *url.URL
 	// TemplateURL *url.URL
 }
@@ -51,7 +51,7 @@ func LoadConfig() *Config {
 		Port:      port,
 		JWTSecret: jwtSecret,
 		AuthURL:   authURL,
-		AgentURL:    agentURL,
+		AgentURL:  agentURL,
 		// DeployURL:   deployURL,
 		// TemplateURL: templateURL,
 	}

@@ -88,4 +88,3 @@ func WSProxy(backendURL *url.URL) http.Handler {
 		}
 	})
 }
-

@@ -1,4 +1,5 @@
 //go:build !windows
+
 package daemon
 
 import (
@@ -15,7 +16,6 @@ func isProcessAlive(pid int) bool {
 	return err == nil
 }
 
-  func detachAttrs() *syscall.SysProcAttr {
-      return &syscall.SysProcAttr{Setsid: true}
-  }
-
+func detachAttrs() *syscall.SysProcAttr {
+	return &syscall.SysProcAttr{Setsid: true}
+}
