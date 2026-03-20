@@ -26,10 +26,13 @@ func main() {
 	// agent gRPC client
 	agentClient := deploysvc.NewAgentClient(cfg.AgentURL)
 
+	// template http clien
+	templateClient := deploysvc.NewTemplateClient(cfg.TemplateURL)
+
 	// repo, service, handler
 	repo := deploysvc.NewDeployRepository(db)
-	// TODO: template provider — for now nil or create a template client
-	svc := deploysvc.NewDeployService(repo, agentClient, nil)
+
+	svc := deploysvc.NewDeployService(repo, agentClient, *templateClient)
 	handler := deploysvc.NewDeployHandler(svc, agentClient)
 
 	// HTTP

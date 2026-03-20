@@ -22,10 +22,6 @@ type DeployRepo interface {
 	Delete(ctx context.Context, id string) error
 }
 
-type TemplateProvider interface {
-	Get(id string) (*models.AppTemplate, bool)
-}
-
 func mapToEnv(defaults, overrides map[string]string) []string {
 	env := map[string]string{}
 
@@ -59,11 +55,11 @@ type deployTask struct {
 type DeployService struct {
 	repo        DeployRepo
 	agentClient agentpb.AgentInternalClient
-	templates   TemplateProvider
+	templates   TemplateClient
 	cmdMap      sync.Map
 }
 
-func NewDeployService(repo DeployRepo, agentClient agentpb.AgentInternalClient, templates TemplateProvider) *DeployService {
+func NewDeployService(repo DeployRepo, agentClient agentpb.AgentInternalClient, templates TemplateClient) *DeployService {
 	return &DeployService{repo: repo, agentClient: agentClient, templates: templates}
 }
 

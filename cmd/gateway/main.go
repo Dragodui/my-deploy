@@ -47,6 +47,7 @@ func main() {
 	authProxy := httputil.NewSingleHostReverseProxy(cfg.AuthURL)
 	agentProxy := httputil.NewSingleHostReverseProxy(cfg.AgentURL)
 	deployProxy := httputil.NewSingleHostReverseProxy(cfg.DeployURL)
+	templateProxy := httputil.NewSingleHostReverseProxy(cfg.TemplateURL)
 
 	mux := http.NewServeMux()
 
@@ -70,6 +71,9 @@ func main() {
 	mux.Handle("GET /api/deployments/", jwtToUserID(cfg.JWTSecret, deployProxy))
 	mux.Handle("DELETE /api/deployments/", jwtToUserID(cfg.JWTSecret, deployProxy))
 	mux.Handle("POST /api/deployments/", jwtToUserID(cfg.JWTSecret, deployProxy))
+
+	// template routes
+	mux.Handle("GET /api/templates", jwtToUserID(cfg.JWTSecret, templateProxy))
 
 	// deploy logs websocket
 	mux.Handle("GET /ws/logs/", gateway.WSProxy(cfg.DeployURL))

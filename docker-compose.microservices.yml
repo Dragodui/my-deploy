@@ -59,9 +59,19 @@ services:
         PORT: "8083"
         DB_DSN: "postgres://deploy:deploypass@postgres-deploy:5432/deploy_db?sslmode=disable"
         AGENT_URL: "agent-service:9082"
+        TEMPLATE_URL: "http://template-service:8084"
       depends_on:
         - postgres-deploy
         - agent-service
+        - template-service
+
+    template-service:
+      build:
+        context: .
+        dockerfile: cmd/template-service/Dockerfile
+      environment:
+        PORT: "8084"
+        TEMPLATES_DIR: "/templates"
 
     gateway:
       build:
@@ -73,10 +83,11 @@ services:
         AUTH_SERVICE_URL: "http://auth-service:8081"
         AGENT_SERVICE_URL: "http://agent-service:8082"
         DEPLOY_SERVICE_URL: "http://deploy-service:8083"
-        # TEMPLATE_SERVICE_URL: "http://localhost:8084"
+        TEMPLATE_SERVICE_URL: "http://template-service:8084"
       ports:
         - "8080:8080"
       depends_on:
         - auth-service
         - agent-service
         - deploy-service
+        - template-service
