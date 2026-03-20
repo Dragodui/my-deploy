@@ -46,6 +46,7 @@ func main() {
 
 	authProxy := httputil.NewSingleHostReverseProxy(cfg.AuthURL)
 	agentProxy := httputil.NewSingleHostReverseProxy(cfg.AgentURL)
+	deployProxy := httputil.NewSingleHostReverseProxy(cfg.DeployURL)
 
 	mux := http.NewServeMux()
 
@@ -56,12 +57,22 @@ func main() {
 	mux.Handle("/api/auth/", authProxy)
 	mux.Handle("GET /api/me", jwtToUserID(cfg.JWTSecret, authProxy))
 
-	// agent router
+	// agent routes
 	mux.Handle("POST /api/agent", jwtToUserID(cfg.JWTSecret, agentProxy))
 	mux.Handle("GET /api/agents", jwtToUserID(cfg.JWTSecret, agentProxy))
 
-	// agent websocket with proxy
+	// agent websocket
 	mux.Handle("GET /ws/agent", gateway.WSProxy(cfg.AgentURL))
+
+	// deploy routes
+	mux.Handle("POST /api/deployments", jwtToUserID(cfg.JWTSecret, deployProxy))
+	mux.Handle("GET /api/deployments", jwtToUserID(cfg.JWTSecret, deployProxy))
+	mux.Handle("GET /api/deployments/", jwtToUserID(cfg.JWTSecret, deployProxy))
+	mux.Handle("DELETE /api/deployments/", jwtToUserID(cfg.JWTSecret, deployProxy))
+	mux.Handle("POST /api/deployments/", jwtToUserID(cfg.JWTSecret, deployProxy))
+
+	// deploy logs websocket
+	mux.Handle("GET /ws/logs/", gateway.WSProxy(cfg.DeployURL))
 
 	log.Printf("gateway starting on port %d", cfg.Port)
 	http.ListenAndServe(":"+strconv.Itoa(cfg.Port), mux)

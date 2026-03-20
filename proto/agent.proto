@@ -12,26 +12,19 @@ message Command {
     bytes payload = 3;
 }
 
+// isConnected
 message IsConnectedRequest {
     string agent_id = 1;
 }
 
+message IsConnectedResponse {
+    bool is_connected = 1;
+}
+
+// sendCommand
 message SendCommandRequest {
     string agent_id = 1;
     Command cmd = 2;
-}
-
-message GetAgentRequest {
-    string id = 1;
-}
-
-message StreamLogsRequest {
-    string agent_id = 1;
-    string container_id = 2;
-}
-
-message IsConnectedResponse {
-    bool is_connected = 1;
 }
 
 message SendCommandResponse {
@@ -40,6 +33,11 @@ message SendCommandResponse {
       string container_id = 3;
       string error = 4;
       string status = 5;
+}
+
+// getAgent
+message GetAgentRequest {
+    string id = 1;
 }
 
 message GetAgentResponse {
@@ -52,10 +50,26 @@ message GetAgentResponse {
     google.protobuf.Timestamp created_at = 7;
 }
 
+// streamLogs
+message StreamLogsRequest {
+    string agent_id = 1;
+    string container_id = 2;
+}
+
 message StreamLogsResponse {
-        string data = 1;
-      bool done = 2;
-      string error = 3;
+    string data = 1;
+    bool done = 2;
+    string error = 3;
+}
+
+// getProgress
+message GetProgressRequest {
+    string cmd_id=1;
+    string agent_id=2;
+}
+
+message GetProgressResponse {
+    string progress = 1;
 }
 
 service AgentInternal {
@@ -63,5 +77,5 @@ service AgentInternal {
     rpc SendCommand(SendCommandRequest) returns (SendCommandResponse);
     rpc GetAgent(GetAgentRequest) returns (GetAgentResponse);
     rpc StreamLogs(StreamLogsRequest) returns (stream StreamLogsResponse);
-
+    rpc GetProgress(GetProgressRequest) returns (GetProgressResponse);
 }

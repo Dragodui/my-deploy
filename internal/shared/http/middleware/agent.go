@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/dragodui/my-deploy/internal/models"
+	"github.com/dragodui/my-deploy/internal/shared/models"
 )
 
 const AgentIDKey contextKey = "agent_id"

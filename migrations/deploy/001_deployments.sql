@@ -1,6 +1,6 @@
 CREATE TABLE deployments (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    agent_id      UUID NOT NULL REFERENCES agents(id),
+    agent_id      UUID NOT NULL,
     name          TEXT NOT NULL,
     app_id        TEXT,
     image         TEXT NOT NULL,

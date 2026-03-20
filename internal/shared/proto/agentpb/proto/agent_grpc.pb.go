@@ -23,6 +23,7 @@ const (
 	AgentInternal_SendCommand_FullMethodName = "/agent.AgentInternal/SendCommand"
 	AgentInternal_GetAgent_FullMethodName    = "/agent.AgentInternal/GetAgent"
 	AgentInternal_StreamLogs_FullMethodName  = "/agent.AgentInternal/StreamLogs"
+	AgentInternal_GetProgress_FullMethodName = "/agent.AgentInternal/GetProgress"
 )
 
 // AgentInternalClient is the client API for AgentInternal service.
@@ -33,6 +34,7 @@ type AgentInternalClient interface {
 	SendCommand(ctx context.Context, in *SendCommandRequest, opts ...grpc.CallOption) (*SendCommandResponse, error)
 	GetAgent(ctx context.Context, in *GetAgentRequest, opts ...grpc.CallOption) (*GetAgentResponse, error)
 	StreamLogs(ctx context.Context, in *StreamLogsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamLogsResponse], error)
+	GetProgress(ctx context.Context, in *GetProgressRequest, opts ...grpc.CallOption) (*GetProgressResponse, error)
 }
 
 type agentInternalClient struct {
@@ -92,6 +94,16 @@ func (c *agentInternalClient) StreamLogs(ctx context.Context, in *StreamLogsRequ
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type AgentInternal_StreamLogsClient = grpc.ServerStreamingClient[StreamLogsResponse]
 
+func (c *agentInternalClient) GetProgress(ctx context.Context, in *GetProgressRequest, opts ...grpc.CallOption) (*GetProgressResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetProgressResponse)
+	err := c.cc.Invoke(ctx, AgentInternal_GetProgress_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgentInternalServer is the server API for AgentInternal service.
 // All implementations must embed UnimplementedAgentInternalServer
 // for forward compatibility.
@@ -100,6 +112,7 @@ type AgentInternalServer interface {
 	SendCommand(context.Context, *SendCommandRequest) (*SendCommandResponse, error)
 	GetAgent(context.Context, *GetAgentRequest) (*GetAgentResponse, error)
 	StreamLogs(*StreamLogsRequest, grpc.ServerStreamingServer[StreamLogsResponse]) error
+	GetProgress(context.Context, *GetProgressRequest) (*GetProgressResponse, error)
 	mustEmbedUnimplementedAgentInternalServer()
 }
 
@@ -121,6 +134,9 @@ func (UnimplementedAgentInternalServer) GetAgent(context.Context, *GetAgentReque
 }
 func (UnimplementedAgentInternalServer) StreamLogs(*StreamLogsRequest, grpc.ServerStreamingServer[StreamLogsResponse]) error {
 	return status.Error(codes.Unimplemented, "method StreamLogs not implemented")
+}
+func (UnimplementedAgentInternalServer) GetProgress(context.Context, *GetProgressRequest) (*GetProgressResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetProgress not implemented")
 }
 func (UnimplementedAgentInternalServer) mustEmbedUnimplementedAgentInternalServer() {}
 func (UnimplementedAgentInternalServer) testEmbeddedByValue()                       {}
@@ -208,6 +224,24 @@ func _AgentInternal_StreamLogs_Handler(srv interface{}, stream grpc.ServerStream
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type AgentInternal_StreamLogsServer = grpc.ServerStreamingServer[StreamLogsResponse]
 
+func _AgentInternal_GetProgress_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetProgressRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentInternalServer).GetProgress(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentInternal_GetProgress_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentInternalServer).GetProgress(ctx, req.(*GetProgressRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AgentInternal_ServiceDesc is the grpc.ServiceDesc for AgentInternal service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -226,6 +260,10 @@ var AgentInternal_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetAgent",
 			Handler:    _AgentInternal_GetAgent_Handler,
+		},
+		{
+			MethodName: "GetProgress",
+			Handler:    _AgentInternal_GetProgress_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

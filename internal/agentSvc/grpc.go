@@ -91,3 +91,15 @@ func (s *AgentGRPCServer) StreamLogs(req *agentpb.StreamLogsRequest, stream agen
 
 	return nil
 }
+
+func (s *AgentGRPCServer) GetProgress(ctx context.Context, req *agentpb.GetProgressRequest) (*agentpb.GetProgressResponse, error) {
+	ac, ok := s.Registry.Get(req.AgentId)
+	if !ok {
+		return nil, status.Error(codes.NotFound, "agent not connected")
+	}
+
+	progress := ac.GetProgress(req.CmdId)
+	return &agentpb.GetProgressResponse{
+		Progress: progress,
+	}, nil
+}

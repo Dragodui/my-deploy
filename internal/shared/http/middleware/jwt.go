@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/dragodui/my-deploy/internal/auth"
+	"github.com/dragodui/my-deploy/internal/shared/auth"
 )
 
 type contextKey string

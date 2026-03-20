@@ -82,6 +82,7 @@ func (x *Command) GetPayload() []byte {
 	return nil
 }
 
+// isConnected
 type IsConnectedRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AgentId       string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
@@ -126,6 +127,51 @@ func (x *IsConnectedRequest) GetAgentId() string {
 	return ""
 }
 
+type IsConnectedResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	IsConnected   bool                   `protobuf:"varint,1,opt,name=is_connected,json=isConnected,proto3" json:"is_connected,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IsConnectedResponse) Reset() {
+	*x = IsConnectedResponse{}
+	mi := &file_proto_agent_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IsConnectedResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IsConnectedResponse) ProtoMessage() {}
+
+func (x *IsConnectedResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_agent_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IsConnectedResponse.ProtoReflect.Descriptor instead.
+func (*IsConnectedResponse) Descriptor() ([]byte, []int) {
+	return file_proto_agent_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *IsConnectedResponse) GetIsConnected() bool {
+	if x != nil {
+		return x.IsConnected
+	}
+	return false
+}
+
+// sendCommand
 type SendCommandRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AgentId       string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
@@ -136,7 +182,7 @@ type SendCommandRequest struct {
 
 func (x *SendCommandRequest) Reset() {
 	*x = SendCommandRequest{}
-	mi := &file_proto_agent_proto_msgTypes[2]
+	mi := &file_proto_agent_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -148,7 +194,7 @@ func (x *SendCommandRequest) String() string {
 func (*SendCommandRequest) ProtoMessage() {}
 
 func (x *SendCommandRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_agent_proto_msgTypes[2]
+	mi := &file_proto_agent_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -161,7 +207,7 @@ func (x *SendCommandRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendCommandRequest.ProtoReflect.Descriptor instead.
 func (*SendCommandRequest) Descriptor() ([]byte, []int) {
-	return file_proto_agent_proto_rawDescGZIP(), []int{2}
+	return file_proto_agent_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *SendCommandRequest) GetAgentId() string {
@@ -178,146 +224,6 @@ func (x *SendCommandRequest) GetCmd() *Command {
 	return nil
 }
 
-type GetAgentRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetAgentRequest) Reset() {
-	*x = GetAgentRequest{}
-	mi := &file_proto_agent_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetAgentRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetAgentRequest) ProtoMessage() {}
-
-func (x *GetAgentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_agent_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetAgentRequest.ProtoReflect.Descriptor instead.
-func (*GetAgentRequest) Descriptor() ([]byte, []int) {
-	return file_proto_agent_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *GetAgentRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-type StreamLogsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AgentId       string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	ContainerId   string                 `protobuf:"bytes,2,opt,name=container_id,json=containerId,proto3" json:"container_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *StreamLogsRequest) Reset() {
-	*x = StreamLogsRequest{}
-	mi := &file_proto_agent_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *StreamLogsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*StreamLogsRequest) ProtoMessage() {}
-
-func (x *StreamLogsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_agent_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use StreamLogsRequest.ProtoReflect.Descriptor instead.
-func (*StreamLogsRequest) Descriptor() ([]byte, []int) {
-	return file_proto_agent_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *StreamLogsRequest) GetAgentId() string {
-	if x != nil {
-		return x.AgentId
-	}
-	return ""
-}
-
-func (x *StreamLogsRequest) GetContainerId() string {
-	if x != nil {
-		return x.ContainerId
-	}
-	return ""
-}
-
-type IsConnectedResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	IsConnected   bool                   `protobuf:"varint,1,opt,name=is_connected,json=isConnected,proto3" json:"is_connected,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *IsConnectedResponse) Reset() {
-	*x = IsConnectedResponse{}
-	mi := &file_proto_agent_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *IsConnectedResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*IsConnectedResponse) ProtoMessage() {}
-
-func (x *IsConnectedResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_agent_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use IsConnectedResponse.ProtoReflect.Descriptor instead.
-func (*IsConnectedResponse) Descriptor() ([]byte, []int) {
-	return file_proto_agent_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *IsConnectedResponse) GetIsConnected() bool {
-	if x != nil {
-		return x.IsConnected
-	}
-	return false
-}
-
 type SendCommandResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -331,7 +237,7 @@ type SendCommandResponse struct {
 
 func (x *SendCommandResponse) Reset() {
 	*x = SendCommandResponse{}
-	mi := &file_proto_agent_proto_msgTypes[6]
+	mi := &file_proto_agent_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -343,7 +249,7 @@ func (x *SendCommandResponse) String() string {
 func (*SendCommandResponse) ProtoMessage() {}
 
 func (x *SendCommandResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_agent_proto_msgTypes[6]
+	mi := &file_proto_agent_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -356,7 +262,7 @@ func (x *SendCommandResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendCommandResponse.ProtoReflect.Descriptor instead.
 func (*SendCommandResponse) Descriptor() ([]byte, []int) {
-	return file_proto_agent_proto_rawDescGZIP(), []int{6}
+	return file_proto_agent_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *SendCommandResponse) GetId() string {
@@ -394,6 +300,51 @@ func (x *SendCommandResponse) GetStatus() string {
 	return ""
 }
 
+// getAgent
+type GetAgentRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAgentRequest) Reset() {
+	*x = GetAgentRequest{}
+	mi := &file_proto_agent_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAgentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAgentRequest) ProtoMessage() {}
+
+func (x *GetAgentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_agent_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAgentRequest.ProtoReflect.Descriptor instead.
+func (*GetAgentRequest) Descriptor() ([]byte, []int) {
+	return file_proto_agent_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *GetAgentRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
 type GetAgentResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -409,7 +360,7 @@ type GetAgentResponse struct {
 
 func (x *GetAgentResponse) Reset() {
 	*x = GetAgentResponse{}
-	mi := &file_proto_agent_proto_msgTypes[7]
+	mi := &file_proto_agent_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -421,7 +372,7 @@ func (x *GetAgentResponse) String() string {
 func (*GetAgentResponse) ProtoMessage() {}
 
 func (x *GetAgentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_agent_proto_msgTypes[7]
+	mi := &file_proto_agent_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -434,7 +385,7 @@ func (x *GetAgentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAgentResponse.ProtoReflect.Descriptor instead.
 func (*GetAgentResponse) Descriptor() ([]byte, []int) {
-	return file_proto_agent_proto_rawDescGZIP(), []int{7}
+	return file_proto_agent_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetAgentResponse) GetId() string {
@@ -484,6 +435,59 @@ func (x *GetAgentResponse) GetCreatedAt() *timestamppb.Timestamp {
 		return x.CreatedAt
 	}
 	return nil
+}
+
+// streamLogs
+type StreamLogsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AgentId       string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	ContainerId   string                 `protobuf:"bytes,2,opt,name=container_id,json=containerId,proto3" json:"container_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StreamLogsRequest) Reset() {
+	*x = StreamLogsRequest{}
+	mi := &file_proto_agent_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamLogsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamLogsRequest) ProtoMessage() {}
+
+func (x *StreamLogsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_agent_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StreamLogsRequest.ProtoReflect.Descriptor instead.
+func (*StreamLogsRequest) Descriptor() ([]byte, []int) {
+	return file_proto_agent_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *StreamLogsRequest) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+func (x *StreamLogsRequest) GetContainerId() string {
+	if x != nil {
+		return x.ContainerId
+	}
+	return ""
 }
 
 type StreamLogsResponse struct {
@@ -546,6 +550,103 @@ func (x *StreamLogsResponse) GetError() string {
 	return ""
 }
 
+// getProgress
+type GetProgressRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CmdId         string                 `protobuf:"bytes,1,opt,name=cmd_id,json=cmdId,proto3" json:"cmd_id,omitempty"`
+	AgentId       string                 `protobuf:"bytes,2,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetProgressRequest) Reset() {
+	*x = GetProgressRequest{}
+	mi := &file_proto_agent_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetProgressRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetProgressRequest) ProtoMessage() {}
+
+func (x *GetProgressRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_agent_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetProgressRequest.ProtoReflect.Descriptor instead.
+func (*GetProgressRequest) Descriptor() ([]byte, []int) {
+	return file_proto_agent_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *GetProgressRequest) GetCmdId() string {
+	if x != nil {
+		return x.CmdId
+	}
+	return ""
+}
+
+func (x *GetProgressRequest) GetAgentId() string {
+	if x != nil {
+		return x.AgentId
+	}
+	return ""
+}
+
+type GetProgressResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Progress      string                 `protobuf:"bytes,1,opt,name=progress,proto3" json:"progress,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetProgressResponse) Reset() {
+	*x = GetProgressResponse{}
+	mi := &file_proto_agent_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetProgressResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetProgressResponse) ProtoMessage() {}
+
+func (x *GetProgressResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_agent_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetProgressResponse.ProtoReflect.Descriptor instead.
+func (*GetProgressResponse) Descriptor() ([]byte, []int) {
+	return file_proto_agent_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *GetProgressResponse) GetProgress() string {
+	if x != nil {
+		return x.Progress
+	}
+	return ""
+}
+
 var File_proto_agent_proto protoreflect.FileDescriptor
 
 const file_proto_agent_proto_rawDesc = "" +
@@ -556,23 +657,20 @@ const file_proto_agent_proto_rawDesc = "" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12\x18\n" +
 	"\apayload\x18\x03 \x01(\fR\apayload\"/\n" +
 	"\x12IsConnectedRequest\x12\x19\n" +
-	"\bagent_id\x18\x01 \x01(\tR\aagentId\"Q\n" +
+	"\bagent_id\x18\x01 \x01(\tR\aagentId\"8\n" +
+	"\x13IsConnectedResponse\x12!\n" +
+	"\fis_connected\x18\x01 \x01(\bR\visConnected\"Q\n" +
 	"\x12SendCommandRequest\x12\x19\n" +
 	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12 \n" +
-	"\x03cmd\x18\x02 \x01(\v2\x0e.agent.CommandR\x03cmd\"!\n" +
-	"\x0fGetAgentRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"Q\n" +
-	"\x11StreamLogsRequest\x12\x19\n" +
-	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12!\n" +
-	"\fcontainer_id\x18\x02 \x01(\tR\vcontainerId\"8\n" +
-	"\x13IsConnectedResponse\x12!\n" +
-	"\fis_connected\x18\x01 \x01(\bR\visConnected\"\x90\x01\n" +
+	"\x03cmd\x18\x02 \x01(\v2\x0e.agent.CommandR\x03cmd\"\x90\x01\n" +
 	"\x13SendCommandResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\asuccess\x18\x02 \x01(\bR\asuccess\x12!\n" +
 	"\fcontainer_id\x18\x03 \x01(\tR\vcontainerId\x12\x14\n" +
 	"\x05error\x18\x04 \x01(\tR\x05error\x12\x16\n" +
-	"\x06status\x18\x05 \x01(\tR\x06status\"\xf8\x01\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\"!\n" +
+	"\x0fGetAgentRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xf8\x01\n" +
 	"\x10GetAgentResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x14\n" +
@@ -582,17 +680,26 @@ const file_proto_agent_proto_rawDesc = "" +
 	"machine_id\x18\x05 \x01(\tR\tmachineId\x127\n" +
 	"\tlast_seen\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\blastSeen\x129\n" +
 	"\n" +
-	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"R\n" +
+	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"Q\n" +
+	"\x11StreamLogsRequest\x12\x19\n" +
+	"\bagent_id\x18\x01 \x01(\tR\aagentId\x12!\n" +
+	"\fcontainer_id\x18\x02 \x01(\tR\vcontainerId\"R\n" +
 	"\x12StreamLogsResponse\x12\x12\n" +
 	"\x04data\x18\x01 \x01(\tR\x04data\x12\x12\n" +
 	"\x04done\x18\x02 \x01(\bR\x04done\x12\x14\n" +
-	"\x05error\x18\x03 \x01(\tR\x05error2\x9d\x02\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\"F\n" +
+	"\x12GetProgressRequest\x12\x15\n" +
+	"\x06cmd_id\x18\x01 \x01(\tR\x05cmdId\x12\x19\n" +
+	"\bagent_id\x18\x02 \x01(\tR\aagentId\"1\n" +
+	"\x13GetProgressResponse\x12\x1a\n" +
+	"\bprogress\x18\x01 \x01(\tR\bprogress2\xe3\x02\n" +
 	"\rAgentInternal\x12D\n" +
 	"\vIsConnected\x12\x19.agent.IsConnectedRequest\x1a\x1a.agent.IsConnectedResponse\x12D\n" +
 	"\vSendCommand\x12\x19.agent.SendCommandRequest\x1a\x1a.agent.SendCommandResponse\x12;\n" +
 	"\bGetAgent\x12\x16.agent.GetAgentRequest\x1a\x17.agent.GetAgentResponse\x12C\n" +
 	"\n" +
-	"StreamLogs\x12\x18.agent.StreamLogsRequest\x1a\x19.agent.StreamLogsResponse0\x01B=Z;github.com/dragodui/my-deploy/internal/shared/proto/agentpbb\x06proto3"
+	"StreamLogs\x12\x18.agent.StreamLogsRequest\x1a\x19.agent.StreamLogsResponse0\x01\x12D\n" +
+	"\vGetProgress\x12\x19.agent.GetProgressRequest\x1a\x1a.agent.GetProgressResponseB=Z;github.com/dragodui/my-deploy/internal/shared/proto/agentpbb\x06proto3"
 
 var (
 	file_proto_agent_proto_rawDescOnce sync.Once
@@ -606,36 +713,40 @@ func file_proto_agent_proto_rawDescGZIP() []byte {
 	return file_proto_agent_proto_rawDescData
 }
 
-var file_proto_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_proto_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_proto_agent_proto_goTypes = []any{
 	(*Command)(nil),               // 0: agent.Command
 	(*IsConnectedRequest)(nil),    // 1: agent.IsConnectedRequest
-	(*SendCommandRequest)(nil),    // 2: agent.SendCommandRequest
-	(*GetAgentRequest)(nil),       // 3: agent.GetAgentRequest
-	(*StreamLogsRequest)(nil),     // 4: agent.StreamLogsRequest
-	(*IsConnectedResponse)(nil),   // 5: agent.IsConnectedResponse
-	(*SendCommandResponse)(nil),   // 6: agent.SendCommandResponse
-	(*GetAgentResponse)(nil),      // 7: agent.GetAgentResponse
+	(*IsConnectedResponse)(nil),   // 2: agent.IsConnectedResponse
+	(*SendCommandRequest)(nil),    // 3: agent.SendCommandRequest
+	(*SendCommandResponse)(nil),   // 4: agent.SendCommandResponse
+	(*GetAgentRequest)(nil),       // 5: agent.GetAgentRequest
+	(*GetAgentResponse)(nil),      // 6: agent.GetAgentResponse
+	(*StreamLogsRequest)(nil),     // 7: agent.StreamLogsRequest
 	(*StreamLogsResponse)(nil),    // 8: agent.StreamLogsResponse
-	(*timestamppb.Timestamp)(nil), // 9: google.protobuf.Timestamp
+	(*GetProgressRequest)(nil),    // 9: agent.GetProgressRequest
+	(*GetProgressResponse)(nil),   // 10: agent.GetProgressResponse
+	(*timestamppb.Timestamp)(nil), // 11: google.protobuf.Timestamp
 }
 var file_proto_agent_proto_depIdxs = []int32{
-	0, // 0: agent.SendCommandRequest.cmd:type_name -> agent.Command
-	9, // 1: agent.GetAgentResponse.last_seen:type_name -> google.protobuf.Timestamp
-	9, // 2: agent.GetAgentResponse.created_at:type_name -> google.protobuf.Timestamp
-	1, // 3: agent.AgentInternal.IsConnected:input_type -> agent.IsConnectedRequest
-	2, // 4: agent.AgentInternal.SendCommand:input_type -> agent.SendCommandRequest
-	3, // 5: agent.AgentInternal.GetAgent:input_type -> agent.GetAgentRequest
-	4, // 6: agent.AgentInternal.StreamLogs:input_type -> agent.StreamLogsRequest
-	5, // 7: agent.AgentInternal.IsConnected:output_type -> agent.IsConnectedResponse
-	6, // 8: agent.AgentInternal.SendCommand:output_type -> agent.SendCommandResponse
-	7, // 9: agent.AgentInternal.GetAgent:output_type -> agent.GetAgentResponse
-	8, // 10: agent.AgentInternal.StreamLogs:output_type -> agent.StreamLogsResponse
-	7, // [7:11] is the sub-list for method output_type
-	3, // [3:7] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	0,  // 0: agent.SendCommandRequest.cmd:type_name -> agent.Command
+	11, // 1: agent.GetAgentResponse.last_seen:type_name -> google.protobuf.Timestamp
+	11, // 2: agent.GetAgentResponse.created_at:type_name -> google.protobuf.Timestamp
+	1,  // 3: agent.AgentInternal.IsConnected:input_type -> agent.IsConnectedRequest
+	3,  // 4: agent.AgentInternal.SendCommand:input_type -> agent.SendCommandRequest
+	5,  // 5: agent.AgentInternal.GetAgent:input_type -> agent.GetAgentRequest
+	7,  // 6: agent.AgentInternal.StreamLogs:input_type -> agent.StreamLogsRequest
+	9,  // 7: agent.AgentInternal.GetProgress:input_type -> agent.GetProgressRequest
+	2,  // 8: agent.AgentInternal.IsConnected:output_type -> agent.IsConnectedResponse
+	4,  // 9: agent.AgentInternal.SendCommand:output_type -> agent.SendCommandResponse
+	6,  // 10: agent.AgentInternal.GetAgent:output_type -> agent.GetAgentResponse
+	8,  // 11: agent.AgentInternal.StreamLogs:output_type -> agent.StreamLogsResponse
+	10, // 12: agent.AgentInternal.GetProgress:output_type -> agent.GetProgressResponse
+	8,  // [8:13] is the sub-list for method output_type
+	3,  // [3:8] is the sub-list for method input_type
+	3,  // [3:3] is the sub-list for extension type_name
+	3,  // [3:3] is the sub-list for extension extendee
+	0,  // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_proto_agent_proto_init() }
@@ -649,7 +760,7 @@ func file_proto_agent_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_agent_proto_rawDesc), len(file_proto_agent_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
