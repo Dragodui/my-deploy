@@ -22,7 +22,7 @@ func main() {
 
 	templatesDir := os.Getenv("TEMPLATES_DIR")
 	if templatesDir == "" {
-		templatesDir = "/templates"
+		templatesDir = "./templates"
 	}
 
 	registry, err := templatesvc.NewTemplatesRegistry(templatesDir)

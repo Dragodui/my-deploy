@@ -10,7 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/dragodui/my-deploy/internal/agent"
 	"github.com/dragodui/my-deploy/internal/daemon"
-	"github.com/dragodui/my-deploy/internal/models"
+	"github.com/dragodui/my-deploy/internal/shared/models"
 )
 
 type AgentCreateResultMsg struct {

@@ -7,7 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/dragodui/my-deploy/internal/agent"
-	"github.com/dragodui/my-deploy/internal/models"
+	"github.com/dragodui/my-deploy/internal/shared/models"
 )
 
 type DeployListMsg struct {

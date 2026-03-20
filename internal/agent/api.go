@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dragodui/my-deploy/internal/models"
+	"github.com/dragodui/my-deploy/internal/shared/models"
 	"github.com/gorilla/websocket"
 )
 
