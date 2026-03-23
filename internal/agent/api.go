@@ -328,6 +328,38 @@ func (api *APIClient) ListDeployments(jwt, agentID string) ([]models.Deployment,
 	return result, nil
 }
 
+func (api *APIClient) UpdateDeployment(jwt, id string, updateReq models.UpdateDeploymentReq) (*models.Deployment, error) {
+	data, err := json.Marshal(updateReq)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PATCH", api.ServerURL+"/api/deployments/"+id, bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+jwt)
+
+	resp, err := api.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("update deployment failed: %s — %s", resp.Status, strings.TrimSpace(string(respBody)))
+	}
+
+	var result models.Deployment
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
 func (api *APIClient) StopDeployment(jwt, deployID string) error {
 	return api.manageDeployment(jwt, deployID, "stop")
 }

@@ -87,6 +87,7 @@ type Deployment struct {
 
 type UpdateDeploymentReq struct {
 	Name    *string       `json:"name,omitempty"`
+	Image   *string       `json:"image,omitempty"`
 	Ports   []PortBinding `json:"ports,omitempty"`
 	Env     []string      `json:"env,omitempty"`
 	AgentID *string       `json:"agent_id,omitempty" db:"agent_id"`

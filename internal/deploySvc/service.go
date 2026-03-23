@@ -256,25 +256,28 @@ func (svc *DeployService) UpdateContainerID(ctx context.Context, id, containerID
 	return svc.repo.UpdateContainerID(ctx, id, containerID)
 }
 
-func (svc *DeployService) Update(ctx context.Context, userID, id string, params models.UpdateDeploymentReq) error {
+func (svc *DeployService) Update(ctx context.Context, userID, id string, params models.UpdateDeploymentReq) (*models.Deployment, error) {
 	deploy, err := svc.repo.GetByID(ctx, id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	agent, err := svc.agentClient.GetAgent(ctx, &agentpb.GetAgentRequest{
 		Id: deploy.AgentID,
 	})
-
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if agent.UserId != userID {
-		return fmt.Errorf("invalid user id")
+		return nil, fmt.Errorf("invalid user id")
 	}
 
-	return svc.repo.Update(ctx, id, params)
+	if err := svc.repo.Update(ctx, id, params); err != nil {
+		return nil, err
+	}
+
+	return svc.repo.GetByID(ctx, id)
 }
 
 func (svc *DeployService) Delete(ctx context.Context, userID, id string) error {

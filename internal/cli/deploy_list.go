@@ -84,11 +84,11 @@ func (m DeployListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				// update available statuses
 				if status == "running" {
-					actions = []string{"Logs", "Stop", "Delete", "Back"}
+					actions = []string{"Logs", "Edit", "Stop", "Delete", "Back"}
 				} else if status == "exited" {
-					actions = []string{"Start", "Delete", "Back"}
+					actions = []string{"Edit", "Start", "Delete", "Back"}
 				} else {
-					actions = []string{"Delete", "Back"}
+					actions = []string{"Edit", "Delete", "Back"}
 				}
 				m.actions = actions
 
@@ -125,6 +125,10 @@ func (m DeployListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.state = "list"
 					m.loading = true
 					return m, tea.Batch(m.spinner.Tick, listDeploymentsCmd(m.api, m.config.JWT, m.config.AgentID))
+				case "Edit":
+					m.action = "edit"
+					m.state = "list"
+					return m, tea.Quit
 				case "Logs":
 					m.action = "logs"
 					m.state = "list"

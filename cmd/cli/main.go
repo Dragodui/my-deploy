@@ -95,6 +95,13 @@ func main() {
 					os.Exit(1)
 				}
 			}
+			if list.Action() == "edit" && list.SelectedDeploy() != nil {
+				editModel := cli.NewDeployEditModel(api, config, *list.SelectedDeploy())
+				if _, err := tea.NewProgram(editModel).Run(); err != nil {
+					fmt.Printf("Error: %v\n", err)
+					os.Exit(1)
+				}
+			}
 			continue
 		default:
 			return

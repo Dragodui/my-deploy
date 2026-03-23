@@ -103,6 +103,11 @@ func (repo *DeployRepository) Update(ctx context.Context, id string, params mode
 		args = append(args, *params.Name)
 		argIdx++
 	}
+	if params.Image != nil {
+		setClauses = append(setClauses, fmt.Sprintf("image = $%d", argIdx))
+		args = append(args, *params.Image)
+		argIdx++
+	}
 	if params.Ports != nil {
 		portsJSON, err := json.Marshal(params.Ports)
 		if err != nil {

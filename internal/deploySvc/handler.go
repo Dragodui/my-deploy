@@ -21,7 +21,7 @@ type DeployServicer interface {
 	InspectDeployment(ctx context.Context, id string) (string, error)
 	Stop(ctx context.Context, containerID, agentID string) error
 	Start(ctx context.Context, containerID, agentID string) error
-	Update(ctx context.Context, userID, id string, params models.UpdateDeploymentReq) error
+	Update(ctx context.Context, userID, id string, params models.UpdateDeploymentReq) (*models.Deployment, error)
 }
 
 type DeployHandler struct {
@@ -187,12 +187,14 @@ func (h *DeployHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.svc.Update(r.Context(), userID, id, req); err != nil {
+	updated, err := h.svc.Update(r.Context(), userID, id, req)
+	if err != nil {
 		http.Error(w, "failed to update deployment", http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(updated)
 }
 
 func (h *DeployHandler) Stop(w http.ResponseWriter, r *http.Request) {
