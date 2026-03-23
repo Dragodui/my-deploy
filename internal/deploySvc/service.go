@@ -19,6 +19,7 @@ type DeployRepo interface {
 	ListByAgent(ctx context.Context, agentID string) ([]models.Deployment, error)
 	UpdateStatus(ctx context.Context, id, status string) error
 	UpdateContainerID(ctx context.Context, id, containerID string) error
+	Update(ctx context.Context, id string, params models.UpdateDeploymentReq) error
 	Delete(ctx context.Context, id string) error
 }
 
@@ -255,16 +256,45 @@ func (svc *DeployService) UpdateContainerID(ctx context.Context, id, containerID
 	return svc.repo.UpdateContainerID(ctx, id, containerID)
 }
 
-func (svc *DeployService) Delete(ctx context.Context, id string) error {
+func (svc *DeployService) Update(ctx context.Context, userID, id string, params models.UpdateDeploymentReq) error {
 	deploy, err := svc.repo.GetByID(ctx, id)
 	if err != nil {
 		return err
 	}
 
+	agent, err := svc.agentClient.GetAgent(ctx, &agentpb.GetAgentRequest{
+		Id: deploy.AgentID,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if agent.UserId != userID {
+		return fmt.Errorf("invalid user id")
+	}
+
+	return svc.repo.Update(ctx, id, params)
+}
+
+func (svc *DeployService) Delete(ctx context.Context, userID, id string) error {
+	deploy, err := svc.repo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	agent, err := svc.agentClient.GetAgent(ctx, &agentpb.GetAgentRequest{
+		Id: deploy.AgentID,
+	})
+	if err != nil {
+		return err
+	}
+	if agent.UserId != userID {
+		return fmt.Errorf("invalid user id")
+	}
+
 	if deploy.ContainerID != nil && *deploy.ContainerID != "" {
-
 		svc.rollbackContainer(ctx, deploy.AgentID, *deploy.ContainerID)
-
 	}
 
 	return svc.repo.Delete(ctx, id)

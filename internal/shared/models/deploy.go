@@ -84,3 +84,10 @@ type Deployment struct {
 	Progress  string    `json:"progress,omitempty" db:"-"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
+
+type UpdateDeploymentReq struct {
+	Name    *string       `json:"name,omitempty"`
+	Ports   []PortBinding `json:"ports,omitempty"`
+	Env     []string      `json:"env,omitempty"`
+	AgentID *string       `json:"agent_id,omitempty" db:"agent_id"`
+}

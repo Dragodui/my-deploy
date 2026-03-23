@@ -16,11 +16,12 @@ type DeployServicer interface {
 	ListByAgent(ctx context.Context, agentID string) ([]models.Deployment, error)
 	UpdateStatus(ctx context.Context, id, status string) error
 	UpdateContainerID(ctx context.Context, id, containerID string) error
-	Delete(ctx context.Context, id string) error
+	Delete(ctx context.Context, userID, id string) error
 	GetProgress(ctx context.Context, deployID string) string
 	InspectDeployment(ctx context.Context, id string) (string, error)
 	Stop(ctx context.Context, containerID, agentID string) error
 	Start(ctx context.Context, containerID, agentID string) error
+	Update(ctx context.Context, userID, id string, params models.UpdateDeploymentReq) error
 }
 
 type DeployHandler struct {
@@ -159,8 +160,35 @@ func (h *DeployHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.svc.Delete(r.Context(), id); err != nil {
+	if err := h.svc.Delete(r.Context(), userID, id); err != nil {
 		http.Error(w, "failed to delete deployment", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *DeployHandler) Update(w http.ResponseWriter, r *http.Request) {
+	userID := r.Header.Get("X-User-ID")
+	if userID == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "id is required", http.StatusBadRequest)
+		return
+	}
+
+	var req models.UpdateDeploymentReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.svc.Update(r.Context(), userID, id, req); err != nil {
+		http.Error(w, "failed to update deployment", http.StatusInternalServerError)
 		return
 	}
 

@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
+	"strings"
 
 	"github.com/dragodui/my-deploy/internal/shared/models"
 )
@@ -89,6 +91,51 @@ func (repo *DeployRepository) ListByAgent(ctx context.Context, agentID string) (
 	}
 
 	return deployments, rows.Err()
+}
+
+func (repo *DeployRepository) Update(ctx context.Context, id string, params models.UpdateDeploymentReq) error {
+	var setClauses []string
+	var args []interface{}
+	argIdx := 1
+
+	if params.Name != nil {
+		setClauses = append(setClauses, fmt.Sprintf("name = $%d", argIdx))
+		args = append(args, *params.Name)
+		argIdx++
+	}
+	if params.Ports != nil {
+		portsJSON, err := json.Marshal(params.Ports)
+		if err != nil {
+			return err
+		}
+		setClauses = append(setClauses, fmt.Sprintf("ports = $%d", argIdx))
+		args = append(args, portsJSON)
+		argIdx++
+	}
+	if params.Env != nil {
+		envJSON, err := json.Marshal(params.Env)
+		if err != nil {
+			return err
+		}
+		setClauses = append(setClauses, fmt.Sprintf("env = $%d", argIdx))
+		args = append(args, envJSON)
+		argIdx++
+	}
+	if params.AgentID != nil {
+		setClauses = append(setClauses, fmt.Sprintf("agent_id = $%d", argIdx))
+		args = append(args, *params.AgentID)
+		argIdx++
+	}
+
+	if len(setClauses) == 0 {
+		return nil
+	}
+
+	query := "UPDATE deployments SET " + strings.Join(setClauses, ", ") + fmt.Sprintf(" WHERE id = $%d", argIdx)
+	args = append(args, id)
+
+	_, err := repo.db.ExecContext(ctx, query, args...)
+	return err
 }
 
 func (repo *DeployRepository) UpdateStatus(ctx context.Context, id, status string) error {

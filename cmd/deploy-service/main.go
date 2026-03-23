@@ -43,6 +43,7 @@ func main() {
 	mux.HandleFunc("DELETE /api/deployments/{id}", handler.Delete)
 	mux.HandleFunc("POST /api/deployments/{id}/start", handler.Start)
 	mux.HandleFunc("POST /api/deployments/{id}/stop", handler.Stop)
+	mux.HandleFunc("PATCH /api/deployments/{id}", handler.Update)
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK"))
 	})
