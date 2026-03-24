@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "github.com/dragodui/my-deploy/internal/shared/proto/authpb";
+
+message ValidateUserRequest {
+    string user_id = 1;
+}
+
+message UserResponse {
+    string id = 1;
+    string name = 2;
+    string email = 3;
+}
+
+service AuthInternal {
+    rpc ValidateUser(ValidateUserRequest) returns (UserResponse);
+}

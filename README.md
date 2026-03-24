@@ -9,53 +9,99 @@
 ~^~^~^~^~^~^~^~^~^~^~^~       /___/        /_/          /___/
 ```
 
-A self-hosted deployment platform. Deploy Docker containers to remote machines through a central server using a beautiful TUI client.
+Self-hosted deployment platform. Deploy Docker containers to remote machines through a microservice backend and interactive TUI client.
 
 ## Architecture
 
 ```
-[Server]      central API + PostgreSQL
-   |                  |
- REST             WebSocket
-   |                  |
-[CLI]               [Agent]
- TUI        daemon on target machine
+                        ┌──────────┐
+                        │  Gateway │ :8080
+                        │ (reverse │
+                        │  proxy)  │
+                        └────┬─────┘
+             ┌───────┬───────┼───────┬────────────┐
+             │       │       │       │            │
+             ▼       ▼       ▼       ▼            ▼
+         ┌───────┐┌───────┐┌───────┐┌──────────┐┌─────────┐
+         │ Auth  ││ Agent ││Deploy ││ Template ││  Logs   │
+         │  Svc  ││  Svc  ││  Svc  ││   Svc    ││  (WS)   │
+         │ :8081 ││ :8082 ││ :8083 ││  :8084   ││         │
+         └───┬───┘└──┬──┬─┘└──┬────┘└──────────┘└─────────┘
+             │   gRPC│  │ gRPC│  HTTP
+             ▼       │  │     │    │
+         [auth_db]   │  │     ▼    ▼
+                     │  │  [deploy_db] [template-svc]
+                     ▼  │
+                [agent_db]
+                        │
+                    WebSocket
+                        │
+                     [Agent]
+                  target machine
 ```
 
-**Server** (`cmd/main.go`) — REST API, manages users, agents, and deployments. Stores state in PostgreSQL. Logs to stdout and `logs/server.log`.
+### Services
 
-**Agent** (`cmd/agent/main.go`) — runs on the target machine with Docker. Connects to the server via WebSocket, receives deploy commands, and manages containers. Supports local (daemon) and remote modes.
+| Service | Entry point | Port | DB | Role |
+|---------|------------|------|-----|------|
+| **gateway** | `cmd/gateway/main.go` | 8080 | — | Reverse proxy, JWT validation, routes to services |
+| **auth-service** | `cmd/auth-service/main.go` | 8081 (HTTP) / 9081 (gRPC) | `auth_db` | Registration, login, JWT tokens |
+| **agent-service** | `cmd/agent-service/main.go` | 8082 (HTTP) / 9082 (gRPC) | `agent_db` | Agent registry, WebSocket hub |
+| **deploy-service** | `cmd/deploy-service/main.go` | 8083 | `deploy_db` | Deployment CRUD, sends commands via gRPC |
+| **template-service** | `cmd/template-service/main.go` | 8084 | — | YAML app templates from `templates/` |
+| **agent** | `cmd/agent/main.go` | — | — | Runs on target machine, executes Docker commands |
+| **CLI** | `cmd/cli/main.go` | — | — | Interactive TUI (Bubble Tea) |
 
-**CLI** (`cmd/cli/main.go`) — interactive TUI client (built with [Bubble Tea](https://github.com/charmbracelet/bubbletea)). Register, log in, manage agents, create deployments from templates or custom images, and view deployment status.
+### Inter-service communication
+
+- **Gateway -> services** — HTTP reverse proxy. Validates JWT, injects `X-User-ID` header.
+- **deploy-service -> agent-service** — gRPC (`agentpb`): send deploy/start/stop commands, stream logs, get progress.
+- **deploy-service -> template-service** — HTTP (`/internal/templates/{id}`): resolve template details.
+- **auth-service** — gRPC (`authpb`): `ValidateUser` for internal user lookups.
+- **agent-service <-> agent** — WebSocket (`/ws/agent`): bidirectional JSON messages.
 
 ## Getting Started
 
 ### Prerequisites
 
 - Go 1.24+
-- PostgreSQL
 - Docker (on agent machines)
+- PostgreSQL (or use Docker Compose)
 
-### Server
-
-```bash
-# Set environment variables (DB connection, JWT secret, port)
-export DB_DSN="postgres://user:pass@localhost:5432/mydeploy?sslmode=disable"
-export JWT_SECRET="your-secret"
-export PORT=8080
-
-# Run the server
-go run cmd/main.go
-```
-
-Or with Docker Compose:
+### Docker Compose (recommended)
 
 ```bash
-# Configure .env with DB_DSN, JWT_SECRET, PORT
 docker compose up --build
 ```
 
-Migrations run automatically on startup from the `migrations/` directory.
+This starts all services, three PostgreSQL instances, and the gateway on port 8080.
+
+### Run services individually
+
+```bash
+# Gateway
+PORT=8080 JWT_SECRET=secret AUTH_SERVICE_URL=http://localhost:8081 \
+  AGENT_SERVICE_URL=http://localhost:8082 DEPLOY_SERVICE_URL=http://localhost:8083 \
+  TEMPLATE_SERVICE_URL=http://localhost:8084 go run cmd/gateway/main.go
+
+# Auth service
+PORT=8081 GRPC_PORT=9081 JWT_SECRET=secret \
+  DB_DSN="postgres://auth:authpass@localhost:5433/auth_db?sslmode=disable" \
+  go run cmd/auth-service/main.go
+
+# Agent service
+PORT=8082 GRPC_PORT=9082 JWT_SECRET=secret \
+  DB_DSN="postgres://agent:agentpass@localhost:5434/agent_db?sslmode=disable" \
+  go run cmd/agent-service/main.go
+
+# Deploy service
+PORT=8083 AGENT_URL=localhost:9082 TEMPLATE_URL=http://localhost:8084 \
+  DB_DSN="postgres://deploy:deploypass@localhost:5435/deploy_db?sslmode=disable" \
+  go run cmd/deploy-service/main.go
+
+# Template service
+PORT=8084 TEMPLATES_DIR=./templates go run cmd/template-service/main.go
+```
 
 ### CLI
 
@@ -63,128 +109,133 @@ Migrations run automatically on startup from the `migrations/` directory.
 go run cmd/cli/main.go
 ```
 
-On first launch the CLI will guide you through:
-
-1. **Registration / Login** — create an account or sign in
-2. **Agent setup** — select an existing agent or create a new one (with optional Docker host)
-3. **Home screen** — main menu:
-   - **Deploy** — create a deployment from a template or custom Docker image, with real-time progress
-   - **Deploy list** — view all deployments with live Docker status, start/stop/delete containers, view live logs
-   - **Start / Stop agent** — manage the local agent daemon
-   - **Change agent** — switch to a different agent
-   - **Logout**
-
-Config is saved to `~/.mydeploy/config.json`.
+The TUI guides you through registration/login, agent setup, and deployment management.
 
 ### Agent
 
-**Local mode** (managed by CLI as a daemon):
+**Local mode** — managed by CLI as a daemon (start/stop from TUI home menu).
 
-The CLI automatically starts the agent daemon after creating an agent. You can also start/stop it from the home menu. Daemon PID and logs are stored in `~/.mydeploy/`.
-
-**Remote mode** (standalone on a remote server):
+**Remote mode:**
 
 ```bash
 go run cmd/agent/main.go --url http://your-server:8080 --token <agent-token>
 ```
 
-The agent token is displayed after agent creation in the CLI. On subsequent runs, the agent reads its config from `~/.mydeploy/config.json`.
+Agent config is stored in `~/.mydeploy/config.json`.
 
-## App Templates
+### Build
 
-Templates define pre-configured deployments as YAML files in `internal/templates/`. Each template specifies an image, ports, volumes, environment variables, and resource limits.
+```bash
+make build          # build all binaries to bin/
+make build-cli      # bin/mydeploy
+make build-agent    # bin/mydeploy-agent
+```
 
-Available templates:
-- **Minecraft Server** — Vanilla Minecraft Java server (`itzg/minecraft-server`) — 2G RAM, 1 CPU
-- **Nginx** — Simple web server (`nginx:alpine`)
+## API
 
-## API Endpoints
+All endpoints go through the gateway on `:8080`.
+
+### Auth
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/health` | - | Health check |
-| POST | `/api/auth/sign-up` | - | Register |
-| POST | `/api/auth/sign-in` | - | Login |
-| GET | `/api/me` | JWT | Current user info |
+| POST | `/api/auth/sign-up` | — | Register (`email`, `name`, `password`) |
+| POST | `/api/auth/sign-in` | — | Login (`email`, `password`) |
+| GET | `/api/me` | JWT | Current user profile |
+
+### Agents
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
 | POST | `/api/agent` | JWT | Register or get agent |
 | GET | `/api/agents` | JWT | List user's agents |
-| GET | `/api/templates` | JWT | List available app templates |
+| GET | `/ws/agent` | Token | Agent WebSocket connection |
+
+### Deployments
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
 | POST | `/api/deployments` | JWT | Create deployment |
 | GET | `/api/deployments?agent_id=` | JWT | List deployments |
-| GET | `/api/deployments/{id}` | JWT | Get deployment |
+| GET | `/api/deployments/{id}` | JWT | Get deployment + status |
 | DELETE | `/api/deployments/{id}` | JWT | Delete deployment |
 | POST | `/api/deployments/{id}/start` | JWT | Start container |
 | POST | `/api/deployments/{id}/stop` | JWT | Stop container |
-| GET | `/ws/agent` | Agent Token | Agent WebSocket |
-| GET | `/ws/logs/{id}` | JWT | Live container logs (WebSocket) |
+
+### Templates
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/templates` | JWT | List app templates |
+
+### gRPC (internal)
+
+**AuthInternal** (`:9081`):
+- `ValidateUser` — verify user by ID
+
+**AgentInternal** (`:9082`):
+- `IsConnected` — check if agent is online
+- `SendCommand` — send deploy/start/stop to agent
+- `GetAgent` — get agent details
+- `StreamLogs` — stream container logs
+- `GetProgress` — get deployment progress
 
 ## Project Structure
 
 ```
 cmd/
-  main.go              server entry point
-  cli/main.go          CLI entry point
-  agent/main.go        agent entry point
-  server/server.go     HTTP router & dependency wiring
+  gateway/             API gateway
+  auth-service/        auth service
+  agent-service/       agent service
+  deploy-service/      deploy service
+  template-service/    template service
+  agent/               agent binary
+  cli/                 CLI binary
 internal/
-  agent/               agent client, config, WebSocket handler, API client
-  auth/                JWT generation, password hashing
-  cli/                 TUI screens (login, register, agent, home, deploy, deploy list, logs)
-  config/              server config (env-based)
-  daemon/              agent daemon management (start, stop, status, PID tracking)
-  db/                  database connection & auto-migrations
-  http/                WebSocket handler
-  http/handler/        HTTP handlers (auth, agent, deploy, templates)
-  http/middleware/     JWT & agent token middleware
-  models/              domain models (User, Agent, Deployment, AppTemplate)
-  registry/            in-memory agent WebSocket connection registry
-  repository/          database queries
-  service/             business logic (auth, agent, deploy, templates)
-  templates/           app template definitions (YAML)
-migrations/            SQL migration files (auto-applied on startup)
+  gateway/             reverse proxy, routing, JWT middleware
+  authSvc/             auth: config, repository, service, handler
+  agentSvc/            agent: config, repository, service, handler, WebSocket hub
+  deploySvc/           deploy: config, repository, service, handler
+  templateSvc/         template: config, service, handler
+  agent/               agent client: WebSocket, Docker operations, config
+  cli/                 TUI screens (Bubble Tea)
+  daemon/              agent daemon management
+  shared/
+    models/            domain models
+    auth/              JWT utilities
+    middleware/        HTTP middleware
+    proto/             protobuf definitions (authpb, agentpb)
+proto/                 .proto source files
+migrations/
+  auth/                auth_db migrations
+  agent/               agent_db migrations
+  deploy/              deploy_db migrations
+templates/             YAML app templates
 ```
 
 ## Tech Stack
 
-- **Server**: Go stdlib `net/http`, PostgreSQL (`lib/pq`), `golang-jwt/jwt`, `gorilla/websocket`
+- **Go** 1.24, stdlib `net/http`
+- **PostgreSQL** 16 (`lib/pq`)
+- **gRPC** + Protobuf for inter-service communication
+- **WebSocket** (`gorilla/websocket`) for agent connections
+- **JWT** (`golang-jwt/jwt`)
 - **CLI**: [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Bubbles](https://github.com/charmbracelet/bubbles), [Lip Gloss](https://github.com/charmbracelet/lipgloss)
-- **Agent**: Docker SDK (`moby/moby/client`), `gorilla/websocket`
-- **Config**: `goccy/go-yaml`, `joho/godotenv`
+- **Docker SDK** (`moby/moby/client`) on agents
+- **Docker Compose** for local development
 
 ## TODO
 
-### Done
-
-- [x] User registration and JWT authentication
-- [x] Agent registration and WebSocket connection
-- [x] User registration and JWT authentication
-- [x] Agent registration and WebSocket connection
-- [x] Deploy from custom Docker image (name, image, ports, env)
-- [x] Deploy from YAML app templates (Minecraft, Nginx)
-- [x] Resource limits (memory, CPU) from templates and user overrides
-- [x] Async deployment with real-time progress (pulling, creating, starting)
-- [x] Deployment list with live Docker status (via container inspect)
-- [x] Start / stop / delete containers from TUI
-- [x] Live container logs streaming via WebSocket (saved to `~/.mydeploy/logs/`)
-- [x] Agent daemon management (start/stop from TUI)
-- [x] Local and remote agent modes
-- [x] Interactive TUI with Bubble Tea
-- [x] Auto-migrations on server startup
-- [x] Docker Compose support
-- [x] Server error logging to file (`logs/server.log`)
-
-### Planned
-
-- [ ] Microservice architecture (split server into auth, deploy, agent gateway services)
+- [ ] Web dashboard
 - [ ] Desktop app (Electron / Tauri / Wails)
-- [ ] Web dashboard as an alternative to TUI
 - [ ] Deployment settings editing from CLI
-- [ ] Agent health monitoring and auto-reconnect status in UI
+- [ ] Agent health monitoring and auto-reconnect UI
 - [ ] More app templates (PostgreSQL, Redis, Node.js)
 - [ ] Environment variables management per agent
 - [ ] Multi-user access control (teams, roles)
-- [ ] HTTPS / TLS support for server and agent connections
+- [ ] HTTPS / TLS support
 - [ ] CI/CD integration (deploy on git push)
-- [ ] Resource usage monitoring (CPU, memory, disk)
-- [ ] Container volume management in CLI
+- [ ] Prometheus metrics + Grafana dashboards
+- [ ] Resource usage monitoring
+- [ ] Container volume management
 - [ ] Notifications (Telegram, Discord, webhooks)

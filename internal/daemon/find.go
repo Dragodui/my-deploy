@@ -26,6 +26,6 @@ func FindAgentBinary() (string, error) {
 			return candidate, nil
 		}
 	}
-	
+
 	return "", err
 }

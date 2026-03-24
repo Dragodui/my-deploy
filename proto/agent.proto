@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package agent;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/dragodui/my-deploy/internal/shared/proto/agentpb";
+
+message Command {
+    string type = 1;
+    string id = 2;
+    bytes payload = 3;
+}
+
+// isConnected
+message IsConnectedRequest {
+    string agent_id = 1;
+}
+
+message IsConnectedResponse {
+    bool is_connected = 1;
+}
+
+// sendCommand
+message SendCommandRequest {
+    string agent_id = 1;
+    Command cmd = 2;
+}
+
+message SendCommandResponse {
+      string id = 1;
+      bool success = 2;
+      string container_id = 3;
+      string error = 4;
+      string status = 5;
+}
+
+// getAgent
+message GetAgentRequest {
+    string id = 1;
+}
+
+message GetAgentResponse {
+    string id = 1;
+    string user_id = 2;
+    string token = 3;
+    string name = 4;
+    string machine_id = 5;
+    google.protobuf.Timestamp last_seen = 6;
+    google.protobuf.Timestamp created_at = 7;
+}
+
+// streamLogs
+message StreamLogsRequest {
+    string agent_id = 1;
+    string container_id = 2;
+}
+
+message StreamLogsResponse {
+    string data = 1;
+    bool done = 2;
+    string error = 3;
+}
+
+// getProgress
+message GetProgressRequest {
+    string cmd_id=1;
+    string agent_id=2;
+}
+
+message GetProgressResponse {
+    string progress = 1;
+}
+
+service AgentInternal {
+    rpc IsConnected(IsConnectedRequest) returns (IsConnectedResponse);
+    rpc SendCommand(SendCommandRequest) returns (SendCommandResponse);
+    rpc GetAgent(GetAgentRequest) returns (GetAgentResponse);
+    rpc StreamLogs(StreamLogsRequest) returns (stream StreamLogsResponse);
+    rpc GetProgress(GetProgressRequest) returns (GetProgressResponse);
+}
