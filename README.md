@@ -9,35 +9,29 @@
 ~^~^~^~^~^~^~^~^~^~^~^~       /___/        /_/          /___/
 ```
 
-Self-hosted deployment platform. Deploy Docker containers to remote machines through a microservice backend and interactive TUI client.
+Self-hosted deployment platform. Deploy Docker containers to remote machines through a microservice backend and interactive TUI client. Includes a Wails (React + TS) desktop app scaffold in `desktop/`.
 
 ## Architecture
 
 ```
-                        ┌──────────┐
-                        │  Gateway │ :8080
-                        │ (reverse │
-                        │  proxy)  │
-                        └────┬─────┘
-             ┌───────┬───────┼───────┬────────────┐
-             │       │       │       │            │
-             ▼       ▼       ▼       ▼            ▼
-         ┌───────┐┌───────┐┌───────┐┌──────────┐┌─────────┐
-         │ Auth  ││ Agent ││Deploy ││ Template ││  Logs   │
-         │  Svc  ││  Svc  ││  Svc  ││   Svc    ││  (WS)   │
-         │ :8081 ││ :8082 ││ :8083 ││  :8084   ││         │
-         └───┬───┘└──┬──┬─┘└──┬────┘└──────────┘└─────────┘
-             │   gRPC│  │ gRPC│  HTTP
-             ▼       │  │     │    │
-         [auth_db]   │  │     ▼    ▼
-                     │  │  [deploy_db] [template-svc]
-                     ▼  │
-                [agent_db]
+                          ┌──────────┐
+                          │ Gateway  │ :8080
+                          └────┬─────┘
+               ┌──────────┬────┼────┬──────────┐
+               ▼          ▼    ▼    ▼          ▼
+           ┌───────┐  ┌──────┐ ┌──────┐   ┌──────────┐
+           │ Auth  │  │Agent │ │Deploy│   │ Template │
+           │  Svc  │  │ Svc  │ │ Svc  │   │  Svc     │
+           └──┬────┘  └──┬───┘ └──┬───┘   └──────────┘
+              │  gRPC   │ gRPC    │HTTP
+              ▼         │         ▼
+         [auth_db]      │     [deploy_db]
+                        ▼
+                   [agent_db]
                         │
-                    WebSocket
+                     WebSocket
                         │
                      [Agent]
-                  target machine
 ```
 
 ### Services
@@ -51,11 +45,12 @@ Self-hosted deployment platform. Deploy Docker containers to remote machines thr
 | **template-service** | `cmd/template-service/main.go` | 8084 | — | YAML app templates from `templates/` |
 | **agent** | `cmd/agent/main.go` | — | — | Runs on target machine, executes Docker commands |
 | **CLI** | `cmd/cli/main.go` | — | — | Interactive TUI (Bubble Tea) |
+| **desktop** | `desktop/` | — | — | Wails desktop app (React + TS) |
 
 ### Inter-service communication
 
-- **Gateway -> services** — HTTP reverse proxy. Validates JWT, injects `X-User-ID` header.
-- **deploy-service -> agent-service** — gRPC (`agentpb`): send deploy/start/stop commands, stream logs, get progress.
+- **Gateway -> services** — HTTP reverse proxy. Validates JWT for user routes, injects `X-User-ID` header.
+- **deploy-service -> agent-service** — gRPC (`agentpb`): send deploy/start/stop commands, get progress.
 - **deploy-service -> template-service** — HTTP (`/internal/templates/{id}`): resolve template details.
 - **auth-service** — gRPC (`authpb`): `ValidateUser` for internal user lookups.
 - **agent-service <-> agent** — WebSocket (`/ws/agent`): bidirectional JSON messages.
@@ -67,6 +62,7 @@ Self-hosted deployment platform. Deploy Docker containers to remote machines thr
 - Go 1.24+
 - Docker (on agent machines)
 - PostgreSQL (or use Docker Compose)
+- Node.js 18+ and Wails CLI (only for the desktop app)
 
 ### Docker Compose (recommended)
 
@@ -90,7 +86,7 @@ PORT=8081 GRPC_PORT=9081 JWT_SECRET=secret \
   go run cmd/auth-service/main.go
 
 # Agent service
-PORT=8082 GRPC_PORT=9082 JWT_SECRET=secret \
+PORT=8082 GRPC_PORT=9082 \
   DB_DSN="postgres://agent:agentpass@localhost:5434/agent_db?sslmode=disable" \
   go run cmd/agent-service/main.go
 
@@ -110,6 +106,18 @@ go run cmd/cli/main.go
 ```
 
 The TUI guides you through registration/login, agent setup, and deployment management.
+
+### Desktop App (Wails)
+
+```bash
+cd desktop
+wails dev
+```
+
+```bash
+cd desktop
+wails build
+```
 
 ### Agent
 
@@ -149,7 +157,7 @@ All endpoints go through the gateway on `:8080`.
 |--------|------|------|-------------|
 | POST | `/api/agent` | JWT | Register or get agent |
 | GET | `/api/agents` | JWT | List user's agents |
-| GET | `/ws/agent` | Token | Agent WebSocket connection |
+| GET | `/ws/agent` | Agent token | Agent WebSocket connection (`X-Agent-Token`) |
 
 ### Deployments
 
@@ -161,6 +169,9 @@ All endpoints go through the gateway on `:8080`.
 | DELETE | `/api/deployments/{id}` | JWT | Delete deployment |
 | POST | `/api/deployments/{id}/start` | JWT | Start container |
 | POST | `/api/deployments/{id}/stop` | JWT | Stop container |
+| PATCH | `/api/deployments/{id}` | JWT | Update deployment fields |
+
+Gateway also exposes `GET /ws/logs/{deploy_id}` as a WebSocket proxy to deploy-service; a deploy-service handler for this is not implemented yet.
 
 ### Templates
 
@@ -196,7 +207,7 @@ internal/
   authSvc/             auth: config, repository, service, handler
   agentSvc/            agent: config, repository, service, handler, WebSocket hub
   deploySvc/           deploy: config, repository, service, handler
-  templateSvc/         template: config, service, handler
+  templateSvc/         template: registry, service, handler
   agent/               agent client: WebSocket, Docker operations, config
   cli/                 TUI screens (Bubble Tea)
   daemon/              agent daemon management
@@ -211,6 +222,7 @@ migrations/
   agent/               agent_db migrations
   deploy/              deploy_db migrations
 templates/             YAML app templates
+desktop/               Wails desktop app (React + TS)
 ```
 
 ## Tech Stack
@@ -223,14 +235,15 @@ templates/             YAML app templates
 - **CLI**: [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Bubbles](https://github.com/charmbracelet/bubbles), [Lip Gloss](https://github.com/charmbracelet/lipgloss)
 - **Docker SDK** (`moby/moby/client`) on agents
 - **Docker Compose** for local development
+- **Desktop UI**: Wails v2 + React + Vite (TypeScript)
 
 ## TODO
 
 - [ ] Web dashboard
-- [ ] Desktop app (Electron / Tauri / Wails)
+- [ ] Desktop app features (Wails UI + API integration)
 - [ ] Deployment settings editing from CLI
 - [ ] Agent health monitoring and auto-reconnect UI
-- [ ] More app templates (PostgreSQL, Redis, Node.js)
+- [ ] More app templates (advanced stacks and multi-container setups)
 - [ ] Environment variables management per agent
 - [ ] Multi-user access control (teams, roles)
 - [ ] HTTPS / TLS support
