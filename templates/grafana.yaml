@@ -1,0 +1,20 @@
+id: grafana
+name: Grafana
+description: Metrics visualization and dashboards
+
+image: grafana/grafana:latest
+
+ports:
+  - name: http
+    container: 3000
+    protocol: tcp
+
+volumes:
+  - name: data
+    container_path: /var/lib/grafana
+
+env:
+  GF_SECURITY_ADMIN_USER: "admin"
+  GF_SECURITY_ADMIN_PASSWORD: "change-me"
+
+restart: always

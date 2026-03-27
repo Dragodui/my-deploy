@@ -1,0 +1,22 @@
+id: mysql
+name: MySQL
+description: MySQL 8 database server
+
+image: mysql:8.0
+
+ports:
+  - name: mysql
+    container: 3306
+    protocol: tcp
+
+volumes:
+  - name: data
+    container_path: /var/lib/mysql
+
+env:
+  MYSQL_ROOT_PASSWORD: "change-me"
+  MYSQL_DATABASE: "app"
+  MYSQL_USER: "app"
+  MYSQL_PASSWORD: "change-me"
+
+restart: always

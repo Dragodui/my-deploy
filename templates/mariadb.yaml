@@ -1,0 +1,22 @@
+id: mariadb
+name: MariaDB
+description: MariaDB database server
+
+image: mariadb:11
+
+ports:
+  - name: mariadb
+    container: 3306
+    protocol: tcp
+
+volumes:
+  - name: data
+    container_path: /var/lib/mysql
+
+env:
+  MARIADB_ROOT_PASSWORD: "change-me"
+  MARIADB_DATABASE: "app"
+  MARIADB_USER: "app"
+  MARIADB_PASSWORD: "change-me"
+
+restart: always

@@ -1,0 +1,23 @@
+id: rabbitmq
+name: RabbitMQ
+description: RabbitMQ with management UI
+
+image: rabbitmq:3-management
+
+ports:
+  - name: amqp
+    container: 5672
+    protocol: tcp
+  - name: http
+    container: 15672
+    protocol: tcp
+
+volumes:
+  - name: data
+    container_path: /var/lib/rabbitmq
+
+env:
+  RABBITMQ_DEFAULT_USER: "admin"
+  RABBITMQ_DEFAULT_PASS: "change-me"
+
+restart: always

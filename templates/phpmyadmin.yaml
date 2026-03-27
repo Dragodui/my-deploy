@@ -1,0 +1,15 @@
+id: phpmyadmin
+name: phpMyAdmin
+description: Web UI for MySQL and MariaDB
+
+image: phpmyadmin:5
+
+ports:
+  - name: http
+    container: 80
+    protocol: tcp
+
+env:
+  PMA_ARBITRARY: "1"
+
+restart: always

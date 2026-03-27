@@ -1,0 +1,20 @@
+id: pgadmin
+name: pgAdmin 4
+description: Web UI for PostgreSQL
+
+image: dpage/pgadmin4:8
+
+ports:
+  - name: http
+    container: 80
+    protocol: tcp
+
+volumes:
+  - name: data
+    container_path: /var/lib/pgadmin
+
+env:
+  PGADMIN_DEFAULT_EMAIL: "admin@example.com"
+  PGADMIN_DEFAULT_PASSWORD: "change-me"
+
+restart: always

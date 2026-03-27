@@ -1,0 +1,20 @@
+id: mongodb
+name: MongoDB
+description: MongoDB 7 database server
+
+image: mongo:7
+
+ports:
+  - name: mongo
+    container: 27017
+    protocol: tcp
+
+volumes:
+  - name: data
+    container_path: /data/db
+
+env:
+  MONGO_INITDB_ROOT_USERNAME: "root"
+  MONGO_INITDB_ROOT_PASSWORD: "change-me"
+
+restart: always

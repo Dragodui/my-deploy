@@ -1,0 +1,16 @@
+id: node-red
+name: Node-RED
+description: Low-code automation and flows editor
+
+image: nodered/node-red:latest
+
+ports:
+  - name: http
+    container: 1880
+    protocol: tcp
+
+volumes:
+  - name: data
+    container_path: /data
+
+restart: always

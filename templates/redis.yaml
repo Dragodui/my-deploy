@@ -1,0 +1,16 @@
+id: redis
+name: Redis
+description: Redis in-memory data store
+
+image: redis:7
+
+ports:
+  - name: redis
+    container: 6379
+    protocol: tcp
+
+volumes:
+  - name: data
+    container_path: /data
+
+restart: always

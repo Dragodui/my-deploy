@@ -1,0 +1,16 @@
+id: uptime-kuma
+name: Uptime Kuma
+description: Uptime monitoring dashboard
+
+image: louislam/uptime-kuma:1
+
+ports:
+  - name: http
+    container: 3001
+    protocol: tcp
+
+volumes:
+  - name: data
+    container_path: /app/data
+
+restart: always

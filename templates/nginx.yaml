@@ -1,0 +1,16 @@
+id: nginx
+name: Nginx
+description: Nginx web server
+
+image: nginx:alpine
+
+ports:
+  - name: http
+    container: 80
+    protocol: tcp
+
+volumes:
+  - name: html
+    container_path: /usr/share/nginx/html
+
+restart: always

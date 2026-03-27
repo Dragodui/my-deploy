@@ -1,0 +1,21 @@
+id: postgres
+name: PostgreSQL
+description: PostgreSQL 16 database server
+
+image: postgres:16
+
+ports:
+  - name: postgres
+    container: 5432
+    protocol: tcp
+
+volumes:
+  - name: data
+    container_path: /var/lib/postgresql/data
+
+env:
+  POSTGRES_USER: "app"
+  POSTGRES_PASSWORD: "change-me"
+  POSTGRES_DB: "app"
+
+restart: always

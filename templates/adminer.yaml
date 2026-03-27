@@ -1,0 +1,12 @@
+id: adminer
+name: Adminer
+description: Lightweight database management UI
+
+image: adminer:latest
+
+ports:
+  - name: http
+    container: 8080
+    protocol: tcp
+
+restart: always

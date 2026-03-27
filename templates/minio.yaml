@@ -1,0 +1,23 @@
+id: minio
+name: MinIO
+description: S3-compatible object storage
+
+image: minio/minio:latest
+
+ports:
+  - name: api
+    container: 9000
+    protocol: tcp
+  - name: console
+    container: 9001
+    protocol: tcp
+
+volumes:
+  - name: data
+    container_path: /data
+
+env:
+  MINIO_ROOT_USER: "minioadmin"
+  MINIO_ROOT_PASSWORD: "change-me"
+
+restart: always
