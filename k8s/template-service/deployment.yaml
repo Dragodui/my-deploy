@@ -21,4 +21,12 @@ spec:
           envFrom:
             - configMapRef:
                 name: template-configmap
+          volumeMounts:
+            - name: templates-volume
+              mountPath: /app/templates
+              readOnly: true
+      volumes:
+        - name: templates-volume
+          configMap:
+            name: templates-files-configmap
       restartPolicy: Always
