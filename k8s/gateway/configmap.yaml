@@ -1,0 +1,10 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: gateway-configmap
+data:
+  PORT: "8080"
+  AUTH_SERVICE_URL: "http://auth-service:80"
+  AGENT_SERVICE_URL: "http://agent-service:80"
+  DEPLOY_SERVICE_URL: "http://deploy-service:80"
+  TEMPLATE_SERVICE_URL: "http://template-service:80"

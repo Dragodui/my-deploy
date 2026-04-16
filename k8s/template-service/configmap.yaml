@@ -1,0 +1,7 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: template-configmap
+data:
+  PORT: '8084'
+  TEMPLATES_DIR: "/app/templates"

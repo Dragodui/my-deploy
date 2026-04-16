@@ -1,0 +1,9 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: deploy-configmap
+data:
+  PORT: '8083'
+  GRPC_PORT: '9083'
+  AGENT_URL: "agent-service:50051"
+  TEMPLATE_URL: "http://template-service:80"
