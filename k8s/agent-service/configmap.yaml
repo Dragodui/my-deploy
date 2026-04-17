@@ -1,7 +1,0 @@
-kind: ConfigMap
-apiVersion: v1
-metadata:
-  name: agent-configmap
-data:
-  PORT: '8082'
-  GRPC_PORT: '9082'
