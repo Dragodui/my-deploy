@@ -19,6 +19,7 @@ spec:
           image: "{{ $.Values.global.imageRegistry }}/{{ $svc.image.repository }}:{{ $svc.image.tag }}"
           ports:
             - containerPort: {{ $svc.port }}
+          
           {{- if $svc.hasHealth }}
           livenessProbe:
             httpGet: { path: /health, port: {{ $svc.port }} }
@@ -27,17 +28,27 @@ spec:
             httpGet: { path: /health, port: {{ $svc.port }} }
             initialDelaySeconds: 5
           {{- end }}
+
           env:
             - name: PORT
               value: {{ $svc.port | quote }}
+            
             {{- if $svc.dbDsn }}
             - name: DB_DSN
-              value: {{ $svc.dbDsn | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Release.Name }}-{{ $name }}-secret
+                  key: DB_DSN
             {{- end }}
+            
             {{- if or $svc.needsJwt (eq $name "auth-service") }}
             - name: JWT_SECRET
-              value: {{ $.Values.global.jwtSecret | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Release.Name }}-{{ $name }}-secret
+                  key: JWT_SECRET
             {{- end }}
+
             {{- range $envName, $envVal := $svc.env }}
             - name: {{ $envName }}
               value: {{ $envVal | quote }}
