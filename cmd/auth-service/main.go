@@ -41,6 +41,7 @@ func main() {
 
 	// http for gateway
 	mux := http.NewServeMux()
+	// health check
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
@@ -48,5 +49,7 @@ func main() {
 	mux.HandleFunc("POST /api/auth/sign-up", handler.SignUp)
 	mux.HandleFunc("POST /api/auth/sign-in", handler.SignIn)
 	mux.Handle("GET /api/me", middleware.JWTAuth(cfg.JWTSecret)(http.HandlerFunc(handler.Me)))
+
+	log.Printf("Starting HTTP server on port %d...", cfg.Port)
 	http.ListenAndServe(":"+strconv.Itoa(cfg.Port), mux)
 }

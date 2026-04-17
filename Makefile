@@ -1,5 +1,5 @@
 REGISTRY ?= my-registry
-VERSION ?= v1.0.1
+VERSION ?= v1.0.2
 
 .PHONY: build-cli build-agent build-server build docker-build docker-build-all
 
