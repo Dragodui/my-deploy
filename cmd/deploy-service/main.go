@@ -4,9 +4,11 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
 	deploysvc "github.com/dragodui/my-deploy/internal/deploySvc"
+	shareddb "github.com/dragodui/my-deploy/internal/shared/db"
 	_ "github.com/lib/pq"
 )
 
@@ -22,6 +24,16 @@ func main() {
 		log.Fatalf("failed to ping db: %v", err)
 	}
 	log.Println("connected to postgres")
+
+	// auto-migration
+	migrationDir := "/migrations"
+	if _, err := os.Stat(migrationDir); os.IsNotExist(err) {
+		// fallback for local development
+		migrationDir = "migrations/deploy"
+	}
+	if err := shareddb.Migrate(db, migrationDir); err != nil {
+		log.Printf("Warning: migrations failed: %v", err)
+	}
 
 	// agent gRPC client
 	agentClient := deploysvc.NewAgentClient(cfg.AgentURL)

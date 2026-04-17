@@ -5,9 +5,11 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 
 	authsvc "github.com/dragodui/my-deploy/internal/authSvc"
+	shareddb "github.com/dragodui/my-deploy/internal/shared/db"
 	"github.com/dragodui/my-deploy/internal/shared/http/middleware"
 	authpb "github.com/dragodui/my-deploy/internal/shared/proto/authpb/proto"
 	_ "github.com/lib/pq"
@@ -27,6 +29,16 @@ func main() {
 		log.Fatalf("failed to ping db: %v", err)
 	}
 	log.Println("connected to postgres")
+
+	// auto-migration
+	migrationDir := "/migrations"
+	if _, err := os.Stat(migrationDir); os.IsNotExist(err) {
+		// fallback for local development
+		migrationDir = "migrations/auth"
+	}
+	if err := shareddb.Migrate(db, migrationDir); err != nil {
+		log.Printf("Warning: migrations failed: %v", err)
+	}
 
 	// repo, service, handler
 	userRepo := authsvc.NewUserRepository(db)
@@ -51,5 +63,7 @@ func main() {
 	mux.Handle("GET /api/me", middleware.JWTAuth(cfg.JWTSecret)(http.HandlerFunc(handler.Me)))
 
 	log.Printf("Starting HTTP server on port %d...", cfg.Port)
-	http.ListenAndServe(":"+strconv.Itoa(cfg.Port), mux)
+	if err := http.ListenAndServe(":"+strconv.Itoa(cfg.Port), mux); err != nil {
+		log.Fatalf("failed to start http server: %v", err)
+	}
 }

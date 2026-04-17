@@ -5,9 +5,11 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 
 	agentsvc "github.com/dragodui/my-deploy/internal/agentSvc"
+	shareddb "github.com/dragodui/my-deploy/internal/shared/db"
 	agentpb "github.com/dragodui/my-deploy/internal/shared/proto/agentpb/proto"
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
@@ -26,6 +28,16 @@ func main() {
 		log.Fatalf("failed to ping db: %v", err)
 	}
 	log.Println("connected to postgres")
+
+	// auto-migration
+	migrationDir := "/migrations"
+	if _, err := os.Stat(migrationDir); os.IsNotExist(err) {
+		// fallback for local development
+		migrationDir = "migrations/agent"
+	}
+	if err := shareddb.Migrate(db, migrationDir); err != nil {
+		log.Printf("Warning: migrations failed: %v", err)
+	}
 
 	// repo, service, handler
 	agentRepo := agentsvc.NewAgentRepository(db)
