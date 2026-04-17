@@ -17,6 +17,7 @@ spec:
       containers:
         - name: {{ $svc.app }}
           image: "{{ $.Values.global.imageRegistry }}/{{ $svc.image.repository }}:{{ $svc.image.tag }}"
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: {{ $svc.port }}
           

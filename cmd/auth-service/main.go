@@ -41,6 +41,10 @@ func main() {
 
 	// http for gateway
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	})
 	mux.HandleFunc("POST /api/auth/sign-up", handler.SignUp)
 	mux.HandleFunc("POST /api/auth/sign-in", handler.SignIn)
 	mux.Handle("GET /api/me", middleware.JWTAuth(cfg.JWTSecret)(http.HandlerFunc(handler.Me)))
