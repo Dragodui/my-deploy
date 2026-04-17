@@ -32,6 +32,10 @@ spec:
           env:
             - name: PORT
               value: {{ $svc.port | quote }}
+            {{- if $svc.grpcPort }}
+            - name: GRPC_PORT
+              value: {{ $svc.grpcPort | quote }}
+            {{- end }}
             
             {{- if $svc.dbDsn }}
             - name: DB_DSN
