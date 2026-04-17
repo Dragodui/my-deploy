@@ -32,7 +32,6 @@ func main() {
 	// auto-migration
 	migrationDir := "/migrations"
 	if _, err := os.Stat(migrationDir); os.IsNotExist(err) {
-		// fallback for local development
 		migrationDir = "migrations/agent"
 	}
 	if err := shareddb.Migrate(db, migrationDir); err != nil {
@@ -54,13 +53,16 @@ func main() {
 
 	// http for gateway
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	})
 	mux.HandleFunc("POST /api/agent", handler.RegisterOrGet)
 	mux.HandleFunc("GET /api/agents", handler.ListByUser)
 	mux.HandleFunc("GET /ws/agent", wsHandler.HandleAgentWS)
-	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("OK"))
-	})
 
-	log.Printf("agent service: HTTP :%d, gRPC :%d", cfg.Port, cfg.GRPCPort)
-	http.ListenAndServe(":"+strconv.Itoa(cfg.Port), mux)
+	log.Printf("Starting HTTP server on port %d...", cfg.Port)
+	if err := http.ListenAndServe(":"+strconv.Itoa(cfg.Port), mux); err != nil {
+		log.Fatalf("failed to start http server: %v", err)
+	}
 }
