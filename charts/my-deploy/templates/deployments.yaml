@@ -1,0 +1,75 @@
+{{- range $name, $svc := .Values.services }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $.Release.Name }}-{{ $name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $svc.app }}
+  template:
+    metadata:
+      labels:
+        app: {{ $svc.app }}
+    spec:
+      containers:
+        - name: {{ $svc.app }}
+          image: "{{ $.Values.global.imageRegistry }}/{{ $svc.image.repository }}:{{ $svc.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{ $svc.port }}
+          
+          {{- if $svc.hasHealth }}
+          livenessProbe:
+            httpGet: { path: /health, port: {{ $svc.port }} }
+            initialDelaySeconds: 15
+          readinessProbe:
+            httpGet: { path: /health, port: {{ $svc.port }} }
+            initialDelaySeconds: 5
+          {{- end }}
+
+          env:
+            - name: PORT
+              value: {{ $svc.port | quote }}
+            {{- if $svc.grpcPort }}
+            - name: GRPC_PORT
+              value: {{ $svc.grpcPort | quote }}
+            {{- end }}
+            
+            {{- if $svc.dbDsn }}
+            - name: DB_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Release.Name }}-{{ $name }}-secret
+                  key: DB_DSN
+            {{- end }}
+            
+            {{- if or $svc.needsJwt (eq $name "auth-service") }}
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Release.Name }}-{{ $name }}-secret
+                  key: JWT_SECRET
+            {{- end }}
+
+            {{- range $envName, $envVal := $svc.env }}
+            - name: {{ $envName }}
+              value: {{ $envVal | quote }}
+            {{- end }}
+
+          {{- if $svc.hasTemplates }}
+          volumeMounts:
+            - name: templates-volume
+              mountPath: /app/templates
+              readOnly: true
+          {{- end }}
+
+      {{- if $svc.hasTemplates }}
+      volumes:
+        - name: templates-volume
+          configMap:
+            name: {{ $.Release.Name }}-template-files
+      {{- end }}
+{{- end }}

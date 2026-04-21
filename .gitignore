@@ -32,3 +32,7 @@ go.work.sum
 # .vscode/
 
 /bin/*
+
+secret.yaml
+
+values.yaml

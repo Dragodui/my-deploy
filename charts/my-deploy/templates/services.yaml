@@ -1,0 +1,20 @@
+{{- $relName := .Release.Name -}}
+{{- range $name, $service := .Values.services }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $relName }}-{{ $name }}
+spec:
+  ports:
+    - port: 80
+      targetPort: {{ $service.port }}
+      name: http
+    {{- if $service.grpcPort }}
+    - port: 50051
+      targetPort: {{ $service.grpcPort }}
+      name: grpc
+    {{- end }}
+  selector:
+    app: {{ $service.app }}
+{{- end }}

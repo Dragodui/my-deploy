@@ -13,229 +13,103 @@ Self-hosted deployment platform. Deploy Docker containers to remote machines thr
 
 ## Architecture
 
-```
-                        ┌──────────┐
-                        │  Gateway │ :8080
-                        │ (reverse │
-                        │  proxy)  │
-                        └────┬─────┘
-             ┌───────┬───────┼───────┬────────────┐
-             │       │       │       │            │
-             ▼       ▼       ▼       ▼            ▼
-         ┌───────┐┌───────┐┌───────┐┌──────────┐┌─────────┐
-         │ Auth  ││ Agent ││Deploy ││ Template ││  Logs   │
-         │  Svc  ││  Svc  ││  Svc  ││   Svc    ││  (WS)   │
-         │ :8081 ││ :8082 ││ :8083 ││  :8084   ││         │
-         └───┬───┘└──┬──┬─┘└──┬────┘└──────────┘└─────────┘
-             │   gRPC│  │ gRPC│  HTTP
-             ▼       │  │     │    │
-         [auth_db]   │  │     ▼    ▼
-                     │  │  [deploy_db] [template-svc]
-                     ▼  │
-                [agent_db]
-                        │
-                    WebSocket
-                        │
-                     [Agent]
-                  target machine
-```
+The system consists of several microservices, each responsible for a specific domain. Communication is handled via HTTP (public API) and gRPC (internal service-to-service).
 
-### Services
+- **Gateway**: Single entry point, JWT validation, and request routing.
+- **Auth Service**: User management, registration, and authentication.
+- **Agent Service**: Manages connected agents via WebSockets.
+- **Deploy Service**: Handles deployment logic and communicates with agents.
+- **Template Service**: Provides application templates (Postgres, Redis, etc.).
 
-| Service | Entry point | Port | DB | Role |
-|---------|------------|------|-----|------|
-| **gateway** | `cmd/gateway/main.go` | 8080 | — | Reverse proxy, JWT validation, routes to services |
-| **auth-service** | `cmd/auth-service/main.go` | 8081 (HTTP) / 9081 (gRPC) | `auth_db` | Registration, login, JWT tokens |
-| **agent-service** | `cmd/agent-service/main.go` | 8082 (HTTP) / 9082 (gRPC) | `agent_db` | Agent registry, WebSocket hub |
-| **deploy-service** | `cmd/deploy-service/main.go` | 8083 | `deploy_db` | Deployment CRUD, sends commands via gRPC |
-| **template-service** | `cmd/template-service/main.go` | 8084 | — | YAML app templates from `templates/` |
-| **agent** | `cmd/agent/main.go` | — | — | Runs on target machine, executes Docker commands |
-| **CLI** | `cmd/cli/main.go` | — | — | Interactive TUI (Bubble Tea) |
-
-### Inter-service communication
-
-- **Gateway -> services** — HTTP reverse proxy. Validates JWT, injects `X-User-ID` header.
-- **deploy-service -> agent-service** — gRPC (`agentpb`): send deploy/start/stop commands, stream logs, get progress.
-- **deploy-service -> template-service** — HTTP (`/internal/templates/{id}`): resolve template details.
-- **auth-service** — gRPC (`authpb`): `ValidateUser` for internal user lookups.
-- **agent-service <-> agent** — WebSocket (`/ws/agent`): bidirectional JSON messages.
-
-## Getting Started
+## Development & Deployment
 
 ### Prerequisites
 
-- Go 1.24+
-- Docker (on agent machines)
-- PostgreSQL (or use Docker Compose)
+- **Go** 1.24+
+- **Docker** & **Docker Compose**
+- **Kubernetes** (Minikube recommended for local testing)
+- **Helm** (for K8s deployment)
 
-### Docker Compose (recommended)
+### Local Development (Docker Compose)
+
+The easiest way to start all services and databases:
 
 ```bash
 docker compose up --build
 ```
 
-This starts all services, three PostgreSQL instances, and the gateway on port 8080.
+The Gateway will be available at `http://localhost:8080`.
 
-### Run services individually
+### Kubernetes Deployment (Minikube)
 
+To deploy the full stack into a local Kubernetes cluster:
+
+1. **Start Minikube & Enable Ingress:**
+   ```bash
+   minikube start
+   minikube addons enable ingress
+   ```
+
+2. **Build and Load Images:**
+   ```bash
+   make docker-build-all
+   minikube image load my-registry/auth-service:v1.0.2
+   minikube image load my-registry/agent-service:v1.0.2
+   minikube image load my-registry/deploy-service:v1.0.2
+   minikube image load my-registry/template-service:v1.0.2
+   minikube image load my-registry/gateway-service:v1.0.2
+   ```
+
+3. **Install via Helm:**
+   ```bash
+   make k8s-install
+   ```
+
+4. **Access the API:**
+   Run `minikube tunnel` in a separate terminal and add the following to your `hosts` file:
+   ```text
+   127.0.0.1 api.my-deploy.local
+   ```
+
+## Makefile Commands
+
+| Command | Description |
+|---------|-------------|
+| `make build` | Build all Go binaries to `bin/` |
+| `make docker-build-all` | Build all Docker images (v1.0.2) |
+| `make k8s-install` | Install/Setup everything in Kubernetes |
+| `make k8s-status` | Check status of Pods, Services, and Ingress |
+| `make k8s-restart` | Restart all deployments to apply changes |
+| `make k8s-uninstall` | Remove all resources from the cluster |
+
+## Database Migrations
+
+The system features an automatic migration system. Upon startup, each service checks its respective migration directory and applies any missing `.sql` files:
+
+- **Auth**: `migrations/auth/` -> `auth_db`
+- **Agent**: `migrations/agent/` -> `agent_db`
+- **Deploy**: `migrations/deploy/` -> `deploy_db`
+
+## API Testing
+
+You can test the API using `curl` or Postman. 
+
+**Health Check:**
 ```bash
-# Gateway
-PORT=8080 JWT_SECRET=secret AUTH_SERVICE_URL=http://localhost:8081 \
-  AGENT_SERVICE_URL=http://localhost:8082 DEPLOY_SERVICE_URL=http://localhost:8083 \
-  TEMPLATE_SERVICE_URL=http://localhost:8084 go run cmd/gateway/main.go
-
-# Auth service
-PORT=8081 GRPC_PORT=9081 JWT_SECRET=secret \
-  DB_DSN="postgres://auth:authpass@localhost:5433/auth_db?sslmode=disable" \
-  go run cmd/auth-service/main.go
-
-# Agent service
-PORT=8082 GRPC_PORT=9082 JWT_SECRET=secret \
-  DB_DSN="postgres://agent:agentpass@localhost:5434/agent_db?sslmode=disable" \
-  go run cmd/agent-service/main.go
-
-# Deploy service
-PORT=8083 AGENT_URL=localhost:9082 TEMPLATE_URL=http://localhost:8084 \
-  DB_DSN="postgres://deploy:deploypass@localhost:5435/deploy_db?sslmode=disable" \
-  go run cmd/deploy-service/main.go
-
-# Template service
-PORT=8084 TEMPLATES_DIR=./templates go run cmd/template-service/main.go
+curl -i http://api.my-deploy.local/health
 ```
 
-### CLI
-
+**Registration (Sign-Up):**
 ```bash
-go run cmd/cli/main.go
-```
-
-The TUI guides you through registration/login, agent setup, and deployment management.
-
-### Agent
-
-**Local mode** — managed by CLI as a daemon (start/stop from TUI home menu).
-
-**Remote mode:**
-
-```bash
-go run cmd/agent/main.go --url http://your-server:8080 --token <agent-token>
-```
-
-Agent config is stored in `~/.mydeploy/config.json`.
-
-### Build
-
-```bash
-make build          # build all binaries to bin/
-make build-cli      # bin/mydeploy
-make build-agent    # bin/mydeploy-agent
-```
-
-## API
-
-All endpoints go through the gateway on `:8080`.
-
-### Auth
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/api/auth/sign-up` | — | Register (`email`, `name`, `password`) |
-| POST | `/api/auth/sign-in` | — | Login (`email`, `password`) |
-| GET | `/api/me` | JWT | Current user profile |
-
-### Agents
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/api/agent` | JWT | Register or get agent |
-| GET | `/api/agents` | JWT | List user's agents |
-| GET | `/ws/agent` | Token | Agent WebSocket connection |
-
-### Deployments
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/api/deployments` | JWT | Create deployment |
-| GET | `/api/deployments?agent_id=` | JWT | List deployments |
-| GET | `/api/deployments/{id}` | JWT | Get deployment + status |
-| DELETE | `/api/deployments/{id}` | JWT | Delete deployment |
-| POST | `/api/deployments/{id}/start` | JWT | Start container |
-| POST | `/api/deployments/{id}/stop` | JWT | Stop container |
-
-### Templates
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/api/templates` | JWT | List app templates |
-
-### gRPC (internal)
-
-**AuthInternal** (`:9081`):
-- `ValidateUser` — verify user by ID
-
-**AgentInternal** (`:9082`):
-- `IsConnected` — check if agent is online
-- `SendCommand` — send deploy/start/stop to agent
-- `GetAgent` — get agent details
-- `StreamLogs` — stream container logs
-- `GetProgress` — get deployment progress
-
-## Project Structure
-
-```
-cmd/
-  gateway/             API gateway
-  auth-service/        auth service
-  agent-service/       agent service
-  deploy-service/      deploy service
-  template-service/    template service
-  agent/               agent binary
-  cli/                 CLI binary
-internal/
-  gateway/             reverse proxy, routing, JWT middleware
-  authSvc/             auth: config, repository, service, handler
-  agentSvc/            agent: config, repository, service, handler, WebSocket hub
-  deploySvc/           deploy: config, repository, service, handler
-  templateSvc/         template: config, service, handler
-  agent/               agent client: WebSocket, Docker operations, config
-  cli/                 TUI screens (Bubble Tea)
-  daemon/              agent daemon management
-  shared/
-    models/            domain models
-    auth/              JWT utilities
-    middleware/        HTTP middleware
-    proto/             protobuf definitions (authpb, agentpb)
-proto/                 .proto source files
-migrations/
-  auth/                auth_db migrations
-  agent/               agent_db migrations
-  deploy/              deploy_db migrations
-templates/             YAML app templates
+curl -X POST http://api.my-deploy.local/api/auth/sign-up \
+     -H "Content-Type: application/json" \
+     -d '{"email":"user@example.com", "password":"securepassword"}'
 ```
 
 ## Tech Stack
 
-- **Go** 1.24, stdlib `net/http`
-- **PostgreSQL** 16 (`lib/pq`)
-- **gRPC** + Protobuf for inter-service communication
-- **WebSocket** (`gorilla/websocket`) for agent connections
-- **JWT** (`golang-jwt/jwt`)
-- **CLI**: [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Bubbles](https://github.com/charmbracelet/bubbles), [Lip Gloss](https://github.com/charmbracelet/lipgloss)
-- **Docker SDK** (`moby/moby/client`) on agents
-- **Docker Compose** for local development
-
-## TODO
-
-- [ ] Web dashboard
-- [ ] Desktop app (Electron / Tauri / Wails)
-- [ ] Deployment settings editing from CLI
-- [ ] Agent health monitoring and auto-reconnect UI
-- [ ] More app templates (PostgreSQL, Redis, Node.js)
-- [ ] Environment variables management per agent
-- [ ] Multi-user access control (teams, roles)
-- [ ] HTTPS / TLS support
-- [ ] CI/CD integration (deploy on git push)
-- [ ] Prometheus metrics + Grafana dashboards
-- [ ] Resource usage monitoring
-- [ ] Container volume management
-- [ ] Notifications (Telegram, Discord, webhooks)
+- **Backend**: Go (stdlib `net/http`, `gRPC`, `WebSockets`)
+- **Database**: PostgreSQL 16
+- **Orchestration**: Kubernetes (Helm) / Docker Compose
+- **CLI**: Bubble Tea (TUI)
+- **Security**: JWT Authentication

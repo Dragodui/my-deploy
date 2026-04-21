@@ -5,9 +5,11 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 
 	agentsvc "github.com/dragodui/my-deploy/internal/agentSvc"
+	shareddb "github.com/dragodui/my-deploy/internal/shared/db"
 	agentpb "github.com/dragodui/my-deploy/internal/shared/proto/agentpb/proto"
 	_ "github.com/lib/pq"
 	"google.golang.org/grpc"
@@ -27,6 +29,15 @@ func main() {
 	}
 	log.Println("connected to postgres")
 
+	// auto-migration
+	migrationDir := "/migrations"
+	if _, err := os.Stat(migrationDir); os.IsNotExist(err) {
+		migrationDir = "migrations/agent"
+	}
+	if err := shareddb.Migrate(db, migrationDir); err != nil {
+		log.Printf("Warning: migrations failed: %v", err)
+	}
+
 	// repo, service, handler
 	agentRepo := agentsvc.NewAgentRepository(db)
 	svc := agentsvc.NewAgentService(agentRepo)
@@ -42,13 +53,16 @@ func main() {
 
 	// http for gateway
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	})
 	mux.HandleFunc("POST /api/agent", handler.RegisterOrGet)
 	mux.HandleFunc("GET /api/agents", handler.ListByUser)
 	mux.HandleFunc("GET /ws/agent", wsHandler.HandleAgentWS)
-	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("OK"))
-	})
 
-	log.Printf("agent service: HTTP :%d, gRPC :%d", cfg.Port, cfg.GRPCPort)
-	http.ListenAndServe(":"+strconv.Itoa(cfg.Port), mux)
+	log.Printf("Starting HTTP server on port %d...", cfg.Port)
+	if err := http.ListenAndServe(":"+strconv.Itoa(cfg.Port), mux); err != nil {
+		log.Fatalf("failed to start http server: %v", err)
+	}
 }

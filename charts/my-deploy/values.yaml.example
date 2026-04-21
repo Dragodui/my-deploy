@@ -1,0 +1,54 @@
+global:
+  imageRegistry: "my-registry"
+  jwtSecret: "CHANGE_ME_WITH_OPENSSL_RAND_BASE64_32"
+
+ingress:
+  enabled: true
+  host: "api.my-deploy.local"
+
+services:
+  auth-service:
+    app: auth
+    port: 8081
+    grpcPort: 9081
+    image: { repository: "auth-service", tag: "v1.0.1" }
+    dbDsn: "postgres://auth:authpass@postgres-auth:5432/auth_db"
+    hasHealth: true
+
+  agent-service:
+    app: agent
+    port: 8082
+    grpcPort: 9082
+    image: { repository: "agent-service", tag: "v1.0.1" }
+    dbDsn: "postgres://agent:agentpass@postgres-agent:5432/agent_db"
+    hasHealth: true
+
+  deploy-service:
+    app: deploy
+    port: 8083
+    grpcPort: 9083
+    image: { repository: "deploy-service", tag: "v1.0.1" }
+    dbDsn: "postgres://deploy:deploypass@postgres-deploy:5432/deploy_db"
+    env:
+      AGENT_URL: "agent-service:50051"
+      TEMPLATE_URL: "http://template-service:80"
+    hasHealth: true
+
+  template-service:
+    app: template
+    port: 8084
+    image: { repository: "template-service", tag: "v1.0.1" }
+    hasTemplates: true
+    hasHealth: true
+
+  gateway:
+    app: gateway
+    port: 8080
+    image: { repository: "gateway-service", tag: "v1.0.1" }
+    needsJwt: true
+    env:
+      AUTH_SERVICE_URL: "http://auth-service:80"
+      AGENT_SERVICE_URL: "http://agent-service:80"
+      DEPLOY_SERVICE_URL: "http://deploy-service:80"
+      TEMPLATE_SERVICE_URL: "http://template-service:80"
+    hasHealth: true
