@@ -104,3 +104,42 @@ func (r *AgentRepository) UpdateLastSeen(ctx context.Context, agentID string) er
 	_, err := r.db.ExecContext(ctx, "UPDATE agents SET last_seen = NOW() WHERE id = $1", agentID)
 	return err
 }
+
+func (r *AgentRepository) CreateBootstrapToken(ctx context.Context, token, userID, agentName string) (*models.AgentBootstrapToken, error) {
+	var bt models.AgentBootstrapToken
+
+	err := r.db.QueryRowContext(ctx, `
+		INSERT INTO agent_bootstrap_tokens (token, user_id, agent_name, expires_at, created_at)
+		VALUES ($1, $2, $3, NOW() + INTERVAL '15 minutes', NOW())
+		RETURNING token, user_id, agent_name, expires_at, used_at, created_at
+	`, token, userID, agentName).Scan(&bt.Token, &bt.UserID, &bt.AgentName, &bt.ExpiresAt, &bt.UsedAt, &bt.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+
+	return &bt, nil
+}
+
+func (r *AgentRepository) GetBootstrapToken(ctx context.Context, token string) (*models.AgentBootstrapToken, error) {
+	var bt models.AgentBootstrapToken
+
+	err := r.db.QueryRowContext(ctx, `
+		SELECT token, user_id, agent_name, expires_at, used_at, created_at
+		FROM agent_bootstrap_tokens
+		WHERE token = $1
+		LIMIT 1
+	`, token).Scan(&bt.Token, &bt.UserID, &bt.AgentName, &bt.ExpiresAt, &bt.UsedAt, &bt.CreatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &bt, nil
+}
+
+func (r *AgentRepository) MarkBootstrapTokenUsed(ctx context.Context, token string) error {
+	_, err := r.db.ExecContext(ctx, "UPDATE agent_bootstrap_tokens SET used_at = NOW() WHERE token = $1 AND used_at IS NULL", token)
+	return err
+}

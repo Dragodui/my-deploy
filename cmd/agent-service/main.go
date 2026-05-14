@@ -59,6 +59,8 @@ func main() {
 	})
 	mux.HandleFunc("POST /api/agent", handler.RegisterOrGet)
 	mux.HandleFunc("GET /api/agents", handler.ListByUser)
+	mux.HandleFunc("POST /api/agent/bootstrap", handler.CreateBootstrapToken)
+	mux.HandleFunc("POST /api/agent/bootstrap/exchange", handler.ExchangeBootstrapToken)
 	mux.HandleFunc("GET /ws/agent", wsHandler.HandleAgentWS)
 
 	log.Printf("Starting HTTP server on port %d...", cfg.Port)

@@ -40,6 +40,51 @@ docker compose up --build
 
 The Gateway will be available at `http://localhost:8080`.
 
+### Remote Agent Install
+
+Remote agent install currently supports Linux servers only and uses a short-lived bootstrap token.
+
+1. Log in locally with `mydeploy`.
+2. Generate a one-line installer command:
+
+```bash
+mydeploy agent-install-command \
+  --name srv-01
+```
+
+3. Run the printed `curl -fsSL ... | sh` command on the remote Linux server as `root`.
+
+The installer will:
+
+- download `mydeploy-agent`
+- exchange the bootstrap token for a permanent agent token
+- write `/root/.mydeploy/config.json`
+- install and start a `systemd` service named `mydeploy-agent`
+
+Current constraints:
+
+- Remote install is supported only for Linux servers.
+- The remote installer currently targets Linux `x86_64`/`amd64`.
+- The remote host must expose `systemd`, `curl`, `install`, and Docker access for the agent process.
+- The gateway must be configured with `PUBLIC_URL` and `AGENT_BINARY_URL`.
+
+Optional overrides:
+
+```bash
+mydeploy agent-install-command \
+  --name srv-01 \
+  --public-url https://api.example.com \
+  --binary-url https://downloads.example.com/mydeploy-agent-linux-amd64
+```
+
+Use them only if you intentionally want to override the server defaults.
+
+Recommended next step for production convenience:
+
+- Publish versioned agent binaries for `linux/amd64` and `linux/arm64`.
+- Add package-based install paths (`.deb`/`.rpm`) or a dedicated download endpoint.
+- Add bootstrap token cleanup / revocation policies in the agent service.
+
 ### Kubernetes Deployment (Minikube)
 
 To deploy the full stack into a local Kubernetes cluster:

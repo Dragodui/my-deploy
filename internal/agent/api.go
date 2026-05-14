@@ -44,6 +44,11 @@ type APIClient struct {
 	HTTPClient *http.Client
 }
 
+type InstallMeta struct {
+	PublicURL        string `json:"public_url"`
+	DefaultBinaryURL string `json:"default_binary_url"`
+}
+
 func NewAPIClient(url string) *APIClient {
 	return &APIClient{
 		ServerURL:  url,
@@ -205,6 +210,66 @@ func (api *APIClient) ListAgents(jwt string) ([]models.Agent, error) {
 	}
 
 	return result.Agents, nil
+}
+
+func (api *APIClient) CreateBootstrapToken(jwt, name string) (string, string, error) {
+	body, _ := json.Marshal(map[string]string{
+		"name": name,
+	})
+
+	req, err := http.NewRequest("POST", api.ServerURL+"/api/agent/bootstrap", bytes.NewReader(body))
+	if err != nil {
+		return "", "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+jwt)
+
+	resp, err := api.HTTPClient.Do(req)
+	if err != nil {
+		return "", "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return "", "", fmt.Errorf("create bootstrap token failed: %s — %s", resp.Status, strings.TrimSpace(string(respBody)))
+	}
+
+	var result struct {
+		Token     string `json:"token"`
+		ExpiresAt string `json:"expires_at"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", "", err
+	}
+
+	return result.Token, result.ExpiresAt, nil
+}
+
+func (api *APIClient) GetInstallMeta(jwt string) (*InstallMeta, error) {
+	req, err := http.NewRequest("GET", api.ServerURL+"/api/install/agent/meta", nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+jwt)
+
+	resp, err := api.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("get install meta failed: %s — %s", resp.Status, strings.TrimSpace(string(respBody)))
+	}
+
+	var result InstallMeta
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
 
 func (api *APIClient) ListTemplates(jwt string) ([]models.AppTemplate, error) {

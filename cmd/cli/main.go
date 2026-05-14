@@ -12,6 +12,13 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "agent-install-command":
+			os.Exit(runAgentInstallCommand(os.Args[2:]))
+		}
+	}
+
 	for {
 		config, err := agent.Load()
 		if err != nil {

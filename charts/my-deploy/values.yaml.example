@@ -47,6 +47,8 @@ services:
     image: { repository: "gateway-service", tag: "v1.0.1" }
     needsJwt: true
     env:
+      PUBLIC_URL: "https://api.my-deploy.example"
+      AGENT_BINARY_URL: "https://downloads.my-deploy.example/mydeploy-agent-linux-amd64"
       AUTH_SERVICE_URL: "http://auth-service:80"
       AGENT_SERVICE_URL: "http://agent-service:80"
       DEPLOY_SERVICE_URL: "http://deploy-service:80"

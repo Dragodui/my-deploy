@@ -61,6 +61,10 @@ func main() {
 	// agent routes
 	mux.Handle("POST /api/agent", jwtToUserID(cfg.JWTSecret, agentProxy))
 	mux.Handle("GET /api/agents", jwtToUserID(cfg.JWTSecret, agentProxy))
+	mux.Handle("POST /api/agent/bootstrap", jwtToUserID(cfg.JWTSecret, agentProxy))
+	mux.Handle("GET /api/install/agent/meta", jwtToUserID(cfg.JWTSecret, gateway.InstallMetaHandler(cfg)))
+	mux.Handle("POST /api/install/agent/config", gateway.InstallConfigHandler(cfg))
+	mux.Handle("GET /install/agent.sh", gateway.InstallScriptHandler(cfg))
 
 	// agent websocket
 	mux.Handle("GET /ws/agent", gateway.WSProxy(cfg.AgentURL))

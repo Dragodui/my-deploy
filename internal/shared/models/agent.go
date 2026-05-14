@@ -20,3 +20,12 @@ type Agent struct {
 	LastSeen  time.Time `json:"last_seen" db:"last_seen"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
+
+type AgentBootstrapToken struct {
+	Token     string     `json:"token" db:"token"`
+	UserID    string     `json:"user_id" db:"user_id"`
+	AgentName string     `json:"agent_name" db:"agent_name"`
+	ExpiresAt time.Time  `json:"expires_at" db:"expires_at"`
+	UsedAt    *time.Time `json:"used_at" db:"used_at"`
+	CreatedAt time.Time  `json:"created_at" db:"created_at"`
+}

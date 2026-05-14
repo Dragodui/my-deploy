@@ -8,12 +8,14 @@ import (
 )
 
 type Config struct {
-	Port      int
-	JWTSecret string
-	AuthURL   *url.URL
-	AgentURL  *url.URL
-	DeployURL   *url.URL
-	TemplateURL *url.URL
+	Port           int
+	JWTSecret      string
+	PublicURL      string
+	AgentBinaryURL string
+	AuthURL        *url.URL
+	AgentURL       *url.URL
+	DeployURL      *url.URL
+	TemplateURL    *url.URL
 }
 
 func LoadConfig() *Config {
@@ -25,6 +27,16 @@ func LoadConfig() *Config {
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
 		log.Fatal("JWT_SECRET is required")
+	}
+
+	publicURL := os.Getenv("PUBLIC_URL")
+	if publicURL == "" {
+		log.Fatal("PUBLIC_URL is required")
+	}
+
+	agentBinaryURL := os.Getenv("AGENT_BINARY_URL")
+	if agentBinaryURL == "" {
+		log.Fatal("AGENT_BINARY_URL is required")
 	}
 
 	authURL, err := url.Parse(os.Getenv("AUTH_SERVICE_URL"))
@@ -48,11 +60,13 @@ func LoadConfig() *Config {
 	}
 
 	return &Config{
-		Port:        port,
-		JWTSecret:   jwtSecret,
-		AuthURL:     authURL,
-		AgentURL:    agentURL,
-		DeployURL:   deployURL,
-		TemplateURL: templateURL,
+		Port:           port,
+		JWTSecret:      jwtSecret,
+		PublicURL:      publicURL,
+		AgentBinaryURL: agentBinaryURL,
+		AuthURL:        authURL,
+		AgentURL:       agentURL,
+		DeployURL:      deployURL,
+		TemplateURL:    templateURL,
 	}
 }

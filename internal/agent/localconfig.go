@@ -46,7 +46,9 @@ func Load() (*LocalConfig, error) {
 }
 
 func Save(config *LocalConfig) error {
-	config.URL = DefaultServerURL
+	if config.URL == "" {
+		config.URL = DefaultServerURL
+	}
 
 	home, err := os.UserHomeDir()
 	if err != nil {
